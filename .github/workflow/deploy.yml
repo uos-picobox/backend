@@ -1,0 +1,82 @@
+# .github/workflows/deploy.yml
+
+name: PicoBox Backend CI/CD
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
+
+      - name: Build with Gradle
+        run: ./gradlew build -x test
+
+      - name: Deploy to EC2 and Restart Service
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          source: "build/libs/BE_Picobox-*.jar"
+          target: "/home/${{ secrets.EC2_USERNAME }}/"
+          overwrite: true
+          script: |
+            set -e
+            
+            EC2_HOME_DIR="/home/${{ secrets.EC2_USERNAME }}"
+            TARGET_JAR_NAME="app.jar"
+            JAR_FILE_PATTERN="BE_Picobox-*.jar"
+            
+            cd $EC2_HOME_DIR
+            
+            echo "Looking for JAR file matching pattern: $JAR_FILE_PATTERN"
+            COPIED_JAR_NAME=$(ls -t $JAR_FILE_PATTERN | grep -v -- '-plain\.jar$' | head -n 1)
+            
+            if [ -z "$COPIED_JAR_NAME" ]; then
+              echo "Error: No suitable JAR file found in $EC2_HOME_DIR matching pattern '$JAR_FILE_PATTERN' after copy!"
+              # 만약을 위해 모든 .jar 파일을 확인 (단, 실행 가능성이 높은 SNAPSHOT 또는 일반 jar 우선)
+              ALL_JARS_FOUND=$(ls -t *.jar | grep -v -- '-plain\.jar$' | head -n 1)
+              if [ -z "$ALL_JARS_FOUND" ]; then
+                 echo "Error: No suitable JAR file found at all in $EC2_HOME_DIR!"
+                 exit 1
+              else
+                 echo "Warning: Using generic *.jar pattern as fallback: $ALL_JARS_FOUND"
+                 COPIED_JAR_NAME=$ALL_JARS_FOUND
+              fi
+            fi
+            
+            echo "Found JAR: $COPIED_JAR_NAME. Setting it up as $TARGET_JAR_NAME."
+            # 기존 app.jar (파일 또는 심볼릭 링크) 삭제
+            rm -f $TARGET_JAR_NAME 
+            # 새 JAR 파일의 이름을 app.jar로 변경 (또는 ln -sf "$COPIED_JAR_NAME" $TARGET_JAR_NAME 로 심볼릭 링크 생성)
+            mv "$COPIED_JAR_NAME" $TARGET_JAR_NAME 
+            
+            echo "Restarting picobox-backend service on EC2..."
+            sudo systemctl restart picobox-backend.service
+            
+            echo "Service restart command executed. Waiting for service to come up..."
+            sleep 20 # 서비스 시작 및 DB 연결에 충분한 시간 부여 (필요시 조정)
+            
+            echo "Checking service status..."
+            # 상태 확인 실패 시 스크립트가 중단되지 않도록 || true 추가
+            sudo systemctl status picobox-backend.service || echo "Service status check indicated an issue or service is not fully up yet."
+            
+            echo "Tailing application log (last 50 lines)..."
+            # 로그 파일이 없을 수도 있으므로 || true 추가
+            tail -n 50 /home/ec2-user/app.log || echo "app.log not found or empty."
