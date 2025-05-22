@@ -12,7 +12,6 @@ spring:
       connection-test-query: SELECT 1 FROM DUAL
   jpa:
     show-sql: true
-    database-platform: org.hibernate.dialect.OracleDialect
     properties:
       hibernate:
         format_sql: true
