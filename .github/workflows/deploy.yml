@@ -25,7 +25,6 @@ jobs:
         run: ./gradlew build -x test
 
       - name: SCP JAR to EC2
-        # main 브랜치 push 시에만 실행
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: appleboy/scp-action@master
         with:
@@ -44,43 +43,42 @@ jobs:
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
           script: |
-            set -e # 스크립트 실행 중 오류 발생 시 즉시 중단
-            
-            EC2_HOME_DIR="/home/${{ secrets.EC2_USERNAME }}"
-            TARGET_JAR_NAME="app.jar"
-            JAR_FILE_PATTERN="picobox-*.jar" 
+            set -e # 오류 발생 시 즉시 스크립트 중단
 
-            cd $EC2_HOME_DIR
+            EC2_HOME_DIR="/home/${{ secrets.EC2_USERNAME }}"
+            JAR_SOURCE_DIR_ON_EC2="$EC2_HOME_DIR/build/libs" 
+            FINAL_TARGET_JAR_PATH="$EC2_HOME_DIR/app.jar"
+            JAR_FILE_PATTERN="picobox-*.jar"
+
+            echo "--- Navigating to JAR directory on EC2: $JAR_SOURCE_DIR_ON_EC2 ---"
+            cd "$JAR_SOURCE_DIR_ON_EC2"
             
-            echo "Looking for JAR file matching pattern: $JAR_FILE_PATTERN in $(pwd)"
-            
-            # scp-action이 복사한 파일 중 -plain.jar가 아닌 최신 파일을 찾습니다.
-            COPIED_JAR_NAME=$(ls -t $JAR_FILE_PATTERN | grep -v -- '-plain\.jar$' | head -n 1)
+            echo "--- Locating JAR file (pattern: $JAR_FILE_PATTERN) ---"
+            COPIED_JAR_NAME=$(ls -t $JAR_FILE_PATTERN 2>/dev/null | grep -v -- '-plain\.jar$' | head -n 1)
 
             if [ -z "$COPIED_JAR_NAME" ]; then
-              echo "Error: No suitable JAR file found in $EC2_HOME_DIR matching pattern '$JAR_FILE_PATTERN' after SCP!"
-              ALL_JARS_FOUND=$(ls -t *.jar | grep -v -- '-plain\.jar$' | head -n 1) # 혹시 패턴이 잘못되었을 경우를 대비한 일반적인 .jar 검색
-              if [ -z "$ALL_JARS_FOUND" ]; then
-                 echo "Error: No suitable JAR file found at all in $EC2_HOME_DIR!"
-                 exit 1
+              echo "Error: JAR file matching '$JAR_FILE_PATTERN' not found in $JAR_SOURCE_DIR_ON_EC2."
+              COPIED_JAR_NAME=$(ls -t *.jar 2>/dev/null | grep -v -- '-plain\.jar$' | head -n 1)
+              if [ -z "$COPIED_JAR_NAME" ]; then
+                echo "Error: No suitable .jar file found in $JAR_SOURCE_DIR_ON_EC2 at all."
+                ls -la
+                exit 1
               else
-                 echo "Warning: Using generic *.jar pattern as fallback: $ALL_JARS_FOUND"
-                 COPIED_JAR_NAME=$ALL_JARS_FOUND
+                echo "Warning: Found JAR using fallback pattern in $JAR_SOURCE_DIR_ON_EC2: $COPIED_JAR_NAME"
               fi
             fi
             
-            echo "Found JAR: $COPIED_JAR_NAME. Renaming it to $TARGET_JAR_NAME."
-            rm -f $TARGET_JAR_NAME 
-            mv "$COPIED_JAR_NAME" $TARGET_JAR_NAME 
-            
-            echo "Restarting picobox-backend service on EC2..."
+            echo "--- Moving $COPIED_JAR_NAME to $FINAL_TARGET_JAR_PATH ---"
+            mv "$COPIED_JAR_NAME" "$FINAL_TARGET_JAR_PATH"
+
+            echo "--- Restarting picobox-backend service ---"
             sudo systemctl restart picobox-backend.service
             
-            echo "Service restart command executed. Waiting for service to come up..."
-            sleep 20 
+            echo "--- Waiting for service to start (20 seconds) ---"
+            sleep 20 # 서비스가 완전히 시작될 때까지 대기
             
-            echo "Checking service status..."
-            sudo systemctl status picobox-backend.service || echo "Service status check indicated an issue or service is not fully up yet."
+            echo "--- Checking picobox-backend service status ---"
+            sudo systemctl status picobox-backend.service || true 
             
-            echo "Tailing application log (last 50 lines)..."
-            tail -n 50 /home/ec2-user/app.log || echo "app.log not found or empty."
+            echo "--- Tailing application log (last 30 lines) ---"
+            tail -n 30 "$EC2_HOME_DIR/app.log" || true
