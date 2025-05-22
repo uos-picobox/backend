@@ -32,7 +32,7 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
-          source: "build/libs/BE_Picobox-*.jar"
+          source: "build/libs/picobox-*.jar"
           target: "/home/${{ secrets.EC2_USERNAME }}/"
           overwrite: true
 
@@ -48,7 +48,7 @@ jobs:
             
             EC2_HOME_DIR="/home/${{ secrets.EC2_USERNAME }}"
             TARGET_JAR_NAME="app.jar"
-            JAR_FILE_PATTERN="BE_Picobox-*.jar" 
+            JAR_FILE_PATTERN="picobox-*.jar" 
 
             cd $EC2_HOME_DIR
             
