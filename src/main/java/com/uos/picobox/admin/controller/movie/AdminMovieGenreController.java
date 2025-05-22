@@ -1,4 +1,4 @@
-package com.uos.picobox.admin.Controller;
+package com.uos.picobox.admin.controller.movie;
 
 import com.uos.picobox.domain.movie.dto.genre.MovieGenreRequestDto;
 import com.uos.picobox.domain.movie.dto.genre.MovieGenreResponseDto;
