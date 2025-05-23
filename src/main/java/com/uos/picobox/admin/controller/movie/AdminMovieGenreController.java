@@ -78,18 +78,20 @@ public class AdminMovieGenreController {
         return ResponseEntity.ok(updatedGenre);
     }
 
-    @Operation(summary = "영화 장르 삭제", description = "영화 장르 정보를 삭제합니다.")
+    @Operation(summary = "영화 장르 삭제", description = "영화 장르 정보를 삭제합니다. 'force=true' 쿼리 파라미터를 사용하면 사용 중인 영화가 있어도 강제로 삭제합니다.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "장르 정보가 성공적으로 삭제되었습니다."),
             @ApiResponse(responseCode = "404", description = "해당 장르를 찾을 수 없습니다."),
-            @ApiResponse(responseCode = "400", description = "잘못된 요청입니다 (예: 해당 장르를 사용하는 영화가 있는 경우)."),
+            @ApiResponse(responseCode = "400", description = "잘못된 요청입니다 (예: 해당 장르를 사용하는 영화가 있어 삭제할 수 없으나 강제 삭제 옵션이 없는 경우)."),
             @ApiResponse(responseCode = "500", description = "서버 오류입니다.")
     })
     @DeleteMapping("/delete/{genreId}")
     public ResponseEntity<Void> deleteMovieGenre(
             @Parameter(description = "삭제할 장르 ID", required = true, example = "1")
-            @PathVariable Long genreId) {
-        movieGenreService.removeGenre(genreId);
+            @PathVariable Long genreId,
+            @Parameter(description = "강제 삭제 여부. 사용 중인 영화가 있어도 삭제하려면 true로 설정.", required = false, example = "false")
+            @RequestParam(value = "force", defaultValue = "false") boolean force) {
+        movieGenreService.removeGenre(genreId, force);
         return ResponseEntity.noContent().build();
     }
 }
