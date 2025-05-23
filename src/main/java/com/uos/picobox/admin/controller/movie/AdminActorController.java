@@ -78,18 +78,19 @@ public class AdminActorController {
         return ResponseEntity.ok(updatedActor);
     }
 
-    @Operation(summary = "배우 정보 삭제", description = "배우 정보를 시스템에서 삭제합니다.")
+    @Operation(summary = "배우 정보 삭제", description = "배우 정보를 시스템에서 삭제합니다. 'force=true' 쿼리 파라미터를 사용하면 출연한 영화가 있어도 강제로 삭제합니다.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "배우 정보가 성공적으로 삭제되었습니다."),
             @ApiResponse(responseCode = "404", description = "해당 배우를 찾을 수 없습니다."),
-            @ApiResponse(responseCode = "400", description = "잘못된 요청입니다 (예: 해당 배우가 출연한 영화가 있는 경우)."),
-            @ApiResponse(responseCode = "500", description = "서버 오류입니다.")
+            @ApiResponse(responseCode = "400", description = "잘못된 요청입니다 (예: 해당 배우가 출연한 영화가 있어 삭제할 수 없으나 강제 삭제 옵션이 없는 경우)."),
     })
     @DeleteMapping("/delete/{actorId}")
     public ResponseEntity<Void> deleteActor(
             @Parameter(description = "삭제할 배우 ID", required = true, example = "1")
-            @PathVariable Long actorId) {
-        actorService.removeActor(actorId);
+            @PathVariable Long actorId,
+            @Parameter(description = "강제 삭제 여부. 출연한 영화가 있어도 삭제하려면 true로 설정.", required = false, example = "false")
+            @RequestParam(value = "force", defaultValue = "false") boolean force) {
+        actorService.removeActor(actorId, force);
         return ResponseEntity.noContent().build();
     }
 }

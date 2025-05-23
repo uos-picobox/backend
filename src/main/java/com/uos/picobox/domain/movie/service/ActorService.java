@@ -6,6 +6,8 @@ import com.uos.picobox.domain.movie.entity.Actor;
 import com.uos.picobox.domain.movie.repository.ActorRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -16,6 +18,7 @@ import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -96,11 +99,38 @@ public class ActorService {
         return new ActorResponseDto(actor);
     }
 
+    /**
+     * 배우 정보를 삭제합니다.
+     * 이 배우가 출연한 영화가 있다면, 관련 영화 제목 목록과 함께 예외를 발생시킵니다.
+     * 강제 삭제 파라미터(force)가 true이면, 관련 영화가 있어도 삭제를 진행합니다 (ON DELETE CASCADE).
+     * @param actorId 삭제할 배우 ID
+     * @param force 강제 삭제 여부 (true이면 출연 영화가 있어도 삭제)
+     * @throws EntityNotFoundException 해당 ID의 배우가 없을 경우
+     * @throws IllegalArgumentException 배우가 출연 영화가 있고 force=false일 경우
+     * @throws DataIntegrityViolationException DB 레벨의 다른 무결성 제약 조건 위반 시
+     */
     @Transactional
-    public void removeActor(Long actorId) {
-        if (!actorRepository.existsById(actorId)) {
-            throw new EntityNotFoundException("해당 ID의 배우를 찾을 수 없습니다: " + actorId);
+    public void removeActor(Long actorId, boolean force) {
+        Actor actor = actorRepository.findById(actorId)
+                .orElseThrow(() -> new EntityNotFoundException("해당 ID의 배우를 찾을 수 없습니다: " + actorId));
+
+        List<String> associatedMovies = actorRepository.findMovieTitlesByActorId(actorId);
+
+        if (!associatedMovies.isEmpty() && !force) {
+            String movies = String.join(", ", associatedMovies);
+            throw new IllegalArgumentException(
+                    String.format("해당 배우가 출연한 영화가 있어 삭제할 수 없습니다. (배우 ID: %d, 영화: [%s]). 강제 삭제를 원하시면 'force=true' 파라미터를 사용하세요.", actorId, movies)
+            );
         }
-        actorRepository.deleteById(actorId);
+
+        // force가 true이거나, associatedMovies가 비어있으면 삭제 진행
+        // ON DELETE CASCADE에 의해 MOVIE_CAST 테이블의 관련 레코드는 자동으로 삭제됩니다.
+        try {
+            actorRepository.delete(actor);
+            log.info("배우 정보가 성공적으로 삭제되었습니다. ID: {}, 강제삭제: {}", actorId, force);
+        } catch (DataIntegrityViolationException e) {
+            log.error("배우 삭제 중 예상치 못한 DataIntegrityViolationException 발생 (ID: {}): {}", actorId, e.getMessage());
+            throw new IllegalStateException("배우 삭제 중 데이터 무결성 문제가 발생했습니다. (ID: " + actorId + ")", e);
+        }
     }
 }

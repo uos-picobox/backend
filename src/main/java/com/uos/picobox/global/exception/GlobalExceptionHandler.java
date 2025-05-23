@@ -2,6 +2,7 @@ package com.uos.picobox.global.exception;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -68,6 +69,28 @@ public class GlobalExceptionHandler {
                 HttpStatus.BAD_REQUEST,
                 "입력값 유효성 검사에 실패했습니다.",
                 errors,
+                requestPath
+        );
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+    }
+
+    // DataIntegrityViolationException 처리 (FK 제약 조건 위반 등)
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException ex,
+                                                                      WebRequest request) {
+        String requestPath = request.getDescription(false).replace("uri=", "");
+        String message = "데이터 무결성 제약 조건 위반입니다. 요청을 확인해주세요.";
+        if (ex.getCause() != null && ex.getCause().getMessage() != null) {
+            if (ex.getCause().getMessage().contains("ORA-02292")) { // Oracle FK 위반
+                message = "다른 데이터에서 참조하고 있어 작업을 완료할 수 없습니다. (예: 하위 레코드가 존재함)";
+            }
+            // 다른 DB 에러 코드에 대한 처리 추가 가능
+        }
+        log.warn("Data integrity violation for request path [{}]: {}", requestPath, ex.getMessage());
+
+        ErrorResponse errorResponse = new ErrorResponse(
+                HttpStatus.BAD_REQUEST,
+                message,
                 requestPath
         );
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
