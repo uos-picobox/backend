@@ -40,7 +40,7 @@ public class EmailService {
                     <span style="background-color: #2D6FF2; color: white; font-size: 30px; font-weight: bold; width: 40px; height: 52px; display: flex; align-items: center; justify-content: center; border-radius: 6px; letter-spacing: 1px; font-family: 'Arial Black', 'Arial Bold', Gadget, sans-serif;">O</span>
                     <span style="background-color: #2D6FF2; color: white; font-size: 30px; font-weight: bold; width: 40px; height: 52px; display: flex; align-items: center; justify-content: center; border-radius: 6px; letter-spacing: 1px; font-family: 'Arial Black', 'Arial Bold', Gadget, sans-serif;">X</span>
                   </div>
-                  <p style="color: #333; font-size: 16px; margin-bottom: 10px;">Pico Box %s을 위해 인증번호를 보내드려요.<br/>이메일 인증 화면에서 아래의 인증 번호를 입력하고 인증을 완료해주세요.</p>
+                  <p style="color: #333; font-size: 16px; margin-bottom: 10px;"><strong>Pico Box %s</strong>을 위해 인증번호를 보내드려요.<br/>이메일 인증 화면에서 아래의 인증 번호를 입력하고 인증을 완료해주세요.</p>
                   <p style="font-size: 32px; font-weight: bold; color: #2D6FF2; letter-spacing: 4px; margin: 30px auto;">%s</p>
                   <p style="color: #999; font-size: 14px; margin-bottom: 4px;">이 인증번호는 5분 후 만료됩니다.</p>
                   <p style="color: #999; font-size: 14px; margin-bottom: 30px;">만료 시간: %s</p>
