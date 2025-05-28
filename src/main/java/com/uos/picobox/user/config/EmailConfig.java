@@ -1,4 +1,4 @@
-package com.uos.picobox.global.config;
+package com.uos.picobox.user.config;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;

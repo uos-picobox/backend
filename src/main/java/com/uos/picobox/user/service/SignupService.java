@@ -19,8 +19,11 @@ public class SignupService {
 
     @Transactional
     public SignupResponseDto registerCustomer(SignupRequestDto signupRequestDto) {
-        if (customerRepository.existsByLoginIdOrEmail(signupRequestDto.getLoginId(), signupRequestDto.getEmail())) {
-            throw new IllegalArgumentException("Customer with loginId " + signupRequestDto.getLoginId() + " or email " + signupRequestDto.getEmail() + " already exists");
+        if (customerRepository.existsByLoginId(signupRequestDto.getLoginId())) {
+            throw new IllegalArgumentException("Customer with loginId " + signupRequestDto.getLoginId() + " already exists.");
+        }
+        if (customerRepository.existsByEmail(signupRequestDto.getEmail())) {
+            throw new IllegalArgumentException("Customer with email " + signupRequestDto.getEmail() + " already exists.");
         }
 
         String encodedPassword = passwordEncoder.encode(signupRequestDto.getPassword());
@@ -30,4 +33,11 @@ public class SignupService {
         return new SignupResponseDto(customer);
     }
 
+    public boolean isLoginIdAvailable(String loginId) {
+        return !customerRepository.existsByLoginId(loginId);
+    }
+
+    public boolean isEmailAvailable(String email) {
+        return !customerRepository.existsByEmail(email);
+    }
 }

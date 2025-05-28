@@ -1,4 +1,4 @@
-package com.uos.picobox.global.utils;
+package com.uos.picobox.user.utils;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
@@ -7,6 +7,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Component;
+
+import java.util.Random;
 
 @Component
 @RequiredArgsConstructor
@@ -28,5 +30,21 @@ public class EmailUtil {
 
     public void sendMail(MimeMessage message) {
         mailSender.send(message);
+    }
+
+    public String createAuthCode() {
+        int CODE_LENGTH = 6;
+        Random random = new Random();
+
+        char[] code = new char[CODE_LENGTH];
+        for (int i = 0; i< CODE_LENGTH; i++) {
+            int edge = random.nextInt(2);
+            if (edge == 0) {
+                code[i] = (char) ('0' + random.nextInt(10));
+                continue;
+            }
+            code[i] = (char) ('A' + random.nextInt(26));
+        }
+        return new String(code);
     }
 }
