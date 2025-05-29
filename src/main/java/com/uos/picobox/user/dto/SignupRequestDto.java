@@ -22,13 +22,13 @@ public class SignupRequestDto {
     @Size(min = 1, max = 12, message = "1~12자 사이여야 합니다.")
     private String loginId;
 
+    /*@Pattern(
+            regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[!@#\\$%^&*()_+\\-={}:;\"'<>?,./]).+$",
+            message = "비밀번호는 영문 대소문자, 숫자, 특수문자를 모두 포함해야 합니다."
+    ) */
     @Schema(description = "비밀번호", example = "P@ssw0rd!", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotBlank
     @Size(min = 8, max = 20, message = "비밀번호는 8자 이상 20자 이하이어야 합니다.")
-    @Pattern(
-        regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[!@#\\$%^&*()_+\\-={}:;\"'<>?,./]).+$",
-        message = "비밀번호는 영문 대소문자, 숫자, 특수문자를 모두 포함해야 합니다."
-    )
     private String password;
 
     @Schema(description = "비밀번호 확인", example = "P@ssw0rd!", requiredMode = Schema.RequiredMode.REQUIRED)
