@@ -9,11 +9,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -30,20 +28,9 @@ public class MovieService {
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE; // yyyy-MM-dd
 
-    private LocalDate parseReleaseDate(String releaseDateStr) {
-        if (StringUtils.hasText(releaseDateStr)) {
-            try {
-                return LocalDate.parse(releaseDateStr, DATE_FORMATTER);
-            } catch (DateTimeParseException e) {
-                throw new IllegalArgumentException("개봉일 형식이 올바르지 않습니다 (yyyy-MM-dd): " + releaseDateStr, e);
-            }
-        }
-        throw new IllegalArgumentException("개봉일은 필수입니다.");
-    }
-
     @Transactional
     public MovieResponseDto registerMovie(MovieRequestDto requestDto) {
-        LocalDate releaseDate = parseReleaseDate(requestDto.getReleaseDate());
+        LocalDate releaseDate = requestDto.getReleaseDate();
 
         movieRepository.findByTitleAndReleaseDate(requestDto.getTitle(), releaseDate)
                 .ifPresent(m -> {
@@ -105,7 +92,7 @@ public class MovieService {
         Movie movie = movieRepository.findById(movieId)
                 .orElseThrow(() -> new EntityNotFoundException("해당 ID의 영화를 찾을 수 없습니다: " + movieId));
 
-        LocalDate releaseDate = parseReleaseDate(requestDto.getReleaseDate());
+        LocalDate releaseDate = requestDto.getReleaseDate();
 
         // 제목, 개봉일 변경 시 중복 체크
         if (!movie.getTitle().equals(requestDto.getTitle()) || !movie.getReleaseDate().equals(releaseDate)) {

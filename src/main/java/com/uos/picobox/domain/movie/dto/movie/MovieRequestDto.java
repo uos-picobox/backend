@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Getter
@@ -28,10 +29,9 @@ public class MovieRequestDto {
     @Schema(description = "상영 시간 (분 단위)", example = "111", requiredMode = Schema.RequiredMode.REQUIRED)
     private Integer duration;
 
-    @NotBlank(message = "개봉일은 필수 입력 항목입니다.")
-    @Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2}$", message = "개봉일은 yyyy-MM-dd 형식으로 입력해주세요.")
+    @NotNull(message = "개봉일은 필수 입력 항목입니다.")
     @Schema(description = "개봉일 (yyyy-MM-dd)", example = "2019-01-23", requiredMode = Schema.RequiredMode.REQUIRED)
-    private String releaseDate;
+    private LocalDate releaseDate;
 
     @Size(max = 30, message = "언어는 최대 30자까지 입력 가능합니다.")
     @Schema(description = "언어", example = "한국어", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
