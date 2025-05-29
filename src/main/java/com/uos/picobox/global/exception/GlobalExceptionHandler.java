@@ -93,6 +93,10 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.BAD_REQUEST,
                 message,
+                requestPath
+        );
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+    }
 
     // @Validated 유효성 검사 실패 시
     @ExceptionHandler(HandlerMethodValidationException.class)
