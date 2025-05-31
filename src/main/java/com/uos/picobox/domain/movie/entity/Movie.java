@@ -49,6 +49,9 @@ public class Movie {
     @JoinColumn(name = "RATING_ID", nullable = false)
     private MovieRating movieRating;
 
+    @Column(name = "POSTER_URL", length = 500)
+    private String posterUrl;
+
     //cascade = CascadeType.ALL, orphanRemoval = true: Movie가 저장/삭제될 때 매핑 정보도 함께 처리
     @OneToMany(mappedBy = "movie", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private Set<MovieGenreMapping> genreMappings = new HashSet<>();
@@ -58,7 +61,7 @@ public class Movie {
 
     @Builder
     public Movie(String title, String description, Integer duration, LocalDate releaseDate,
-                 String language, String director, Distributor distributor, MovieRating movieRating) {
+                 String language, String director, Distributor distributor, MovieRating movieRating, String posterUrl) {
         this.title = title;
         this.description = description;
         this.duration = duration;
@@ -67,6 +70,7 @@ public class Movie {
         this.director = director;
         this.distributor = distributor;
         this.movieRating = movieRating;
+        this.posterUrl = posterUrl;
     }
 
     public void updateDetails(String title, String description, Integer duration, LocalDate releaseDate,
@@ -79,6 +83,10 @@ public class Movie {
         this.director = director;
         this.distributor = distributor;
         this.movieRating = movieRating;
+    }
+
+    public void updatePosterUrl(String posterUrl) {
+        this.posterUrl = posterUrl;
     }
 
     // 연관관계 편의 메소드 (장르)

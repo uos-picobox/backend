@@ -23,10 +23,14 @@ public class ActorResponseDto {
     @Schema(description = "배우 소개", example = "배우입니다.")
     private String biography;
 
+    @Schema(description = "프로필 이미지 URL")
+    private String profileImageUrl;
+
     public ActorResponseDto(Actor actor) {
         this.actorId = actor.getId();
         this.name = actor.getName();
         this.birthDate = actor.getBirthDate();
         this.biography = actor.getBiography();
+        this.profileImageUrl = actor.getProfileImageUrl();
     }
 }

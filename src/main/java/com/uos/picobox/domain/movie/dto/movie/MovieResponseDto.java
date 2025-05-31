@@ -49,6 +49,9 @@ public class MovieResponseDto {
     @Schema(description = "출연진 목록")
     private List<MovieCastMemberResponseDto> movieCasts;
 
+    @Schema(description = "포스터 이미지 URL")
+    private String posterUrl;
+
     // MovieCast 정보를 담기 위한 내부 DTO
     @Getter
     public static class MovieCastMemberResponseDto {
@@ -89,6 +92,7 @@ public class MovieResponseDto {
         this.director = movie.getDirector();
         this.distributor = new DistributorResponseDto(movie.getDistributor());
         this.movieRating = new MovieRatingResponseDto(movie.getMovieRating());
+        this.posterUrl = movie.getPosterUrl();
 
         this.genres = movie.getGenreMappings().stream()
                 .map(mapping -> new MovieGenreResponseDto(mapping.getMovieGenre()))
