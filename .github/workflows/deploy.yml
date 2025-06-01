@@ -38,23 +38,24 @@ jobs:
       - name: Execute deployment script on EC2
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: appleboy/ssh-action@master
+        env:
+          DOT_ENV_CONTENTS: ${{ secrets.DOT_ENV_CONTENTS }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
-          envs: |
-            ENV_FILE_CONTENT_FROM_SECRET: ${{ secrets.DOT_ENV_CONTENTS }}
+          envs: DOT_ENV_CONTENTS
           script: |
             set -e
-            
+
             EC2_HOME_DIR="/home/${{ secrets.EC2_USERNAME }}"
             ENV_FILE_PATH="$EC2_HOME_DIR/.env"
             JAR_SOURCE_DIR_ON_EC2="$EC2_HOME_DIR/build/libs"
             FINAL_TARGET_JAR_PATH="$EC2_HOME_DIR/app.jar"
             JAR_FILE_PATTERN="picobox-*.jar"
-            
+
             echo "--- Creating/Updating environment file at $ENV_FILE_PATH from a single GitHub Secret ---"
-            printf '%s\n' "$ENV_FILE_CONTENT_FROM_SECRET" > "$ENV_FILE_PATH"
+            printf '%s\n' "$DOT_ENV_CONTENTS" > "$ENV_FILE_PATH"
             chmod 600 "$ENV_FILE_PATH"
             echo "Environment file successfully created/updated at $ENV_FILE_PATH."
             
