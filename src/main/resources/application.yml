@@ -48,9 +48,13 @@ spring:
       credentials:
         access-key: ${AWS_ACCESS_KEY_ID}
         secret-key: ${AWS_SECRET_ACCESS_KEY}
-
 springdoc:
   override-with-generic-response: false
   swagger-ui:
     tags-sorter: alpha
     operations-sorter: method
+    urls:
+      - name: Java Annotations API
+        url: /v3/api-docs
+      - name: Custom OpenAPI YAML
+        url: /swagger/openapi.yaml

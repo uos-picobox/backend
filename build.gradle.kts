@@ -50,6 +50,8 @@ dependencies {
     implementation("com.oracle.database.security:oraclepki:23.8.0.25.04")
     implementation("com.oracle.database.security:osdt_cert:21.17.0.0")
     implementation("com.oracle.database.security:osdt_core:21.17.0.0")
+
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
 }
 
 tasks.withType<Test> {
