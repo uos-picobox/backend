@@ -42,43 +42,54 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          envs: |
+            ENV_FILE_CONTENT_FROM_SECRET: ${{ secrets.DOT_ENV_CONTENTS }}
           script: |
-            set -e # 오류 발생 시 즉시 스크립트 중단
+            set -e
 
-            EC2_HOME_DIR="/home/${{ secrets.EC2_USERNAME }}"
-            JAR_SOURCE_DIR_ON_EC2="$EC2_HOME_DIR/build/libs" 
-            FINAL_TARGET_JAR_PATH="$EC2_HOME_DIR/app.jar"
+            EC2_APP_DIR="/home/${{ secrets.EC2_USERNAME }}"
+            ENV_FILE_PATH="$EC2_APP_DIR/.env"
+            FINAL_TARGET_JAR_PATH="$EC2_APP_DIR/app.jar"
             JAR_FILE_PATTERN="picobox-*.jar"
 
-            echo "--- Navigating to JAR directory on EC2: $JAR_SOURCE_DIR_ON_EC2 ---"
-            cd "$JAR_SOURCE_DIR_ON_EC2"
+            echo "--- Creating/Updating environment file at $ENV_FILE_PATH from a single GitHub Secret ---"
+            printf '%s\n' "$ENV_FILE_CONTENT_FROM_SECRET" > "$ENV_FILE_PATH"
+            chmod 600 "$ENV_FILE_PATH"
+            echo "Environment file successfully created/updated at $ENV_FILE_PATH."
+
+            echo "--- Navigating to application directory on EC2: $EC2_APP_DIR ---"
+            cd "$EC2_APP_DIR"
             
-            echo "--- Locating JAR file (pattern: $JAR_FILE_PATTERN) ---"
+            echo "--- Locating newly copied JAR file (pattern: $JAR_FILE_PATTERN) ---"
             COPIED_JAR_NAME=$(ls -t $JAR_FILE_PATTERN 2>/dev/null | grep -v -- '-plain\.jar$' | head -n 1)
 
             if [ -z "$COPIED_JAR_NAME" ]; then
-              echo "Error: JAR file matching '$JAR_FILE_PATTERN' not found in $JAR_SOURCE_DIR_ON_EC2."
-              COPIED_JAR_NAME=$(ls -t *.jar 2>/dev/null | grep -v -- '-plain\.jar$' | head -n 1)
-              if [ -z "$COPIED_JAR_NAME" ]; then
-                echo "Error: No suitable .jar file found in $JAR_SOURCE_DIR_ON_EC2 at all."
-                ls -la
-                exit 1
-              else
-                echo "Warning: Found JAR using fallback pattern in $JAR_SOURCE_DIR_ON_EC2: $COPIED_JAR_NAME"
-              fi
+              echo "Error: JAR file matching '$JAR_FILE_PATTERN' not found in $EC2_APP_DIR after SCP."
+              ls -la "$EC2_APP_DIR"
+              exit 1
             fi
+            echo "Found JAR: $COPIED_JAR_NAME"
             
-            echo "--- Moving $COPIED_JAR_NAME to $FINAL_TARGET_JAR_PATH ---"
+            echo "--- Preparing to move $COPIED_JAR_NAME to $FINAL_TARGET_JAR_PATH ---"
+            if [ -f "$FINAL_TARGET_JAR_PATH" ]; then
+              echo "Removing existing $FINAL_TARGET_JAR_PATH"
+              rm -f "$FINAL_TARGET_JAR_PATH"
+            fi
+            echo "Moving $COPIED_JAR_NAME to $FINAL_TARGET_JAR_PATH"
             mv "$COPIED_JAR_NAME" "$FINAL_TARGET_JAR_PATH"
 
             echo "--- Restarting picobox-backend service ---"
             sudo systemctl restart picobox-backend.service
             
             echo "--- Waiting for service to start (20 seconds) ---"
-            sleep 20 # 서비스가 완전히 시작될 때까지 대기
+            sleep 20
             
             echo "--- Checking picobox-backend service status ---"
             sudo systemctl status picobox-backend.service || true 
             
-            echo "--- Tailing application log (last 30 lines) ---"
-            tail -n 30 "$EC2_HOME_DIR/app.log" || true
+            echo "--- Tailing application log (last 30 lines, if exists) ---"
+            if [ -f "$EC2_APP_DIR/app.log" ]; then
+              tail -n 30 "$EC2_APP_DIR/app.log"
+            else
+              echo "Log file $EC2_APP_DIR/app.log not found."
+            fi
