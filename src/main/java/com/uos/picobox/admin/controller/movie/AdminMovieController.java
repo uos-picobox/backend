@@ -1,5 +1,7 @@
 package com.uos.picobox.admin.controller.movie;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.uos.picobox.domain.movie.dto.movie.MovieRequestDto;
 import com.uos.picobox.domain.movie.dto.movie.MovieResponseDto;
 import com.uos.picobox.domain.movie.service.MovieService;
@@ -18,6 +20,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 
 @Tag(name = "관리자 - 05. 영화 정보 관리", description = "영화 정보 CRUD API (관리자용)")
@@ -39,13 +42,40 @@ public class AdminMovieController {
     })
     @PostMapping(value = "/create-with-image", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
     public ResponseEntity<MovieResponseDto> createMovieWithImage(
-            @Parameter(name = "movieDetails", required = true, description = "영화 상세 정보 (JSON 형식)",
+            @Parameter(name = "movieDetails", required = true,
+                    description = """
+                        영화 상세 정보 (JSON 형식)
+                    
+                        예시:
+                        ```json
+                        {
+                          "title": "극한직업23",
+                          "description": "낮에는 치킨장사, 밤에는 잠복근무...",
+                          "duration": 111,
+                          "releaseDate": "2020-01-23",
+                          "language": "한국어",
+                          "director": "이병헌",
+                          "distributorId": 1,
+                          "movieRatingId": 1,
+                          "genreIds": [3, 21],
+                          "movieCasts": [
+                            {
+                              "actorId": 1,
+                              "role": "고반장"
+                            }
+                          ]
+                        }
+                        ```
+                        """,
                     content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = MovieRequestDto.class)))
-            @Valid @RequestPart("movieDetails") MovieRequestDto requestDto,
+            @Valid @RequestPart("movieDetails") String movieDetailsJson,
 
             @Parameter(name = "posterImage", description = "포스터 이미지 파일 (선택 사항)",
                     content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE))
-            @RequestPart(value = "posterImage", required = false) MultipartFile posterImageFile) {
+            @RequestPart(value = "posterImage", required = false) MultipartFile posterImageFile) throws IOException {
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        MovieRequestDto requestDto = objectMapper.readValue(movieDetailsJson, MovieRequestDto.class);
         MovieResponseDto responseDto = movieService.registerMovie(requestDto, posterImageFile);
         return ResponseEntity.status(HttpStatus.CREATED).body(responseDto);
     }
