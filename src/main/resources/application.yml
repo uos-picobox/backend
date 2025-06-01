@@ -53,8 +53,3 @@ springdoc:
   swagger-ui:
     tags-sorter: alpha
     operations-sorter: method
-    urls:
-      - name: Java Annotations API
-        url: /v3/api-docs
-      - name: Custom OpenAPI YAML
-        url: /swagger/openapi.yaml
