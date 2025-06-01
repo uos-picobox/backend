@@ -31,15 +31,37 @@ public class AdminActorController {
 
     private final ActorService actorService;
 
-    @PostMapping(value = "/create-with-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "배우 정보 및 프로필 이미지 동시 등록",
+            description = "새로운 배우 정보(JSON 'actorDetails')와 프로필 이미지 파일('profileImage')을 한 번의 요청으로 등록합니다. (Content-Type: multipart/form-data)")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "배우 정보와 이미지가 성공적으로 등록되었습니다.",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ActorResponseDto.class))),
+            @ApiResponse(responseCode = "400", description = "잘못된 요청입니다 (예: 유효성 검사 실패, 중복 배우 등)."),
+            @ApiResponse(responseCode = "500", description = "서버 오류 또는 파일 업로드 실패입니다.")
+    })
+    @PostMapping(value = "/create-with-image", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
     public ResponseEntity<ActorResponseDto> createActorWithImage(
-            @RequestPart("actorDetails") String actorDetailsJson,
-            @RequestPart(value = "profileImage", required = false) MultipartFile profileImageFile
-    ) throws IOException {
+            @Parameter(name = "actorDetails", required = true,
+                    description = """
+                        배우 상세 정보 (JSON 형식)
+                    
+                        예시:
+                        ```json
+                        {
+                          "name": "정우성",
+                          "birthDate": "1972-04-22",
+                          "biography": "대한민국 배우입니다."
+                        }
+                        ```
+                        """,
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ActorRequestDto.class)))
+            @Valid @RequestPart("actorDetails") String actorDetailsJson,
+            @Parameter(name = "profileImage", description = "프로필 이미지 파일 (선택 사항)",
+                    content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE))
+            @RequestPart(value = "profileImage", required = false) MultipartFile profileImageFile) throws IOException {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
         ActorRequestDto actorRequestDto = objectMapper.readValue(actorDetailsJson, ActorRequestDto.class);
-
         ActorResponseDto responseDto = actorService.registerActor(actorRequestDto, profileImageFile);
         return ResponseEntity.status(HttpStatus.CREATED).body(responseDto);
     }
