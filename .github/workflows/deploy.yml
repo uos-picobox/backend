@@ -46,38 +46,43 @@ jobs:
             ENV_FILE_CONTENT_FROM_SECRET: ${{ secrets.DOT_ENV_CONTENTS }}
           script: |
             set -e
-
-            EC2_APP_DIR="/home/${{ secrets.EC2_USERNAME }}"
-            ENV_FILE_PATH="$EC2_APP_DIR/.env"
-            FINAL_TARGET_JAR_PATH="$EC2_APP_DIR/app.jar"
+            
+            EC2_HOME_DIR="/home/${{ secrets.EC2_USERNAME }}"
+            ENV_FILE_PATH="$EC2_HOME_DIR/.env"
+            JAR_SOURCE_DIR_ON_EC2="$EC2_HOME_DIR/build/libs"
+            FINAL_TARGET_JAR_PATH="$EC2_HOME_DIR/app.jar"
             JAR_FILE_PATTERN="picobox-*.jar"
-
+            
             echo "--- Creating/Updating environment file at $ENV_FILE_PATH from a single GitHub Secret ---"
             printf '%s\n' "$ENV_FILE_CONTENT_FROM_SECRET" > "$ENV_FILE_PATH"
             chmod 600 "$ENV_FILE_PATH"
             echo "Environment file successfully created/updated at $ENV_FILE_PATH."
-
-            echo "--- Navigating to application directory on EC2: $EC2_APP_DIR ---"
-            cd "$EC2_APP_DIR"
             
-            echo "--- Locating newly copied JAR file (pattern: $JAR_FILE_PATTERN) ---"
+            echo "--- Navigating to JAR directory on EC2: $JAR_SOURCE_DIR_ON_EC2 ---"
+            cd "$JAR_SOURCE_DIR_ON_EC2"
+            
+            echo "--- Locating newly copied JAR file (pattern: $JAR_FILE_PATTERN) in $PWD ---"
             COPIED_JAR_NAME=$(ls -t $JAR_FILE_PATTERN 2>/dev/null | grep -v -- '-plain\.jar$' | head -n 1)
-
+            
             if [ -z "$COPIED_JAR_NAME" ]; then
-              echo "Error: JAR file matching '$JAR_FILE_PATTERN' not found in $EC2_APP_DIR after SCP."
-              ls -la "$EC2_APP_DIR"
+              echo "Error: JAR file matching '$JAR_FILE_PATTERN' not found in $PWD after SCP."
+              echo "Listing contents of $PWD:"
+              ls -la
+              echo "Listing contents of $EC2_HOME_DIR (parent home directory):"
+              ls -la "$EC2_HOME_DIR"
               exit 1
             fi
-            echo "Found JAR: $COPIED_JAR_NAME"
+            echo "Found JAR in $PWD: $COPIED_JAR_NAME"
             
             echo "--- Preparing to move $COPIED_JAR_NAME to $FINAL_TARGET_JAR_PATH ---"
+
             if [ -f "$FINAL_TARGET_JAR_PATH" ]; then
               echo "Removing existing $FINAL_TARGET_JAR_PATH"
               rm -f "$FINAL_TARGET_JAR_PATH"
             fi
             echo "Moving $COPIED_JAR_NAME to $FINAL_TARGET_JAR_PATH"
             mv "$COPIED_JAR_NAME" "$FINAL_TARGET_JAR_PATH"
-
+            
             echo "--- Restarting picobox-backend service ---"
             sudo systemctl restart picobox-backend.service
             
@@ -88,8 +93,8 @@ jobs:
             sudo systemctl status picobox-backend.service || true 
             
             echo "--- Tailing application log (last 30 lines, if exists) ---"
-            if [ -f "$EC2_APP_DIR/app.log" ]; then
-              tail -n 30 "$EC2_APP_DIR/app.log"
+            if [ -f "$EC2_HOME_DIR/app.log" ]; then
+              tail -n 30 "$EC2_HOME_DIR/app.log"
             else
-              echo "Log file $EC2_APP_DIR/app.log not found."
+              echo "Log file $EC2_HOME_DIR/app.log not found."
             fi
