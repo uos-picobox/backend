@@ -47,6 +47,19 @@ jobs:
           script: |
             set -e
             
+            echo "--- EC2에서 ENV_FILE_CONTENT_FROM_SECRET 변수 내용 확인 시작 ---"
+            echo "변수 내용 미리보기 (첫 50자): $(echo "$ENV_FILE_CONTENT_FROM_SECRET" | cut -c1-50)"
+            echo "변수 전체 길이: ${#ENV_FILE_CONTENT_FROM_SECRET}"
+            echo "전체 변수 내용:"
+            echo "$ENV_FILE_CONTENT_FROM_SECRET"
+            echo "--- EC2에서 ENV_FILE_CONTENT_FROM_SECRET 변수 내용 확인 끝 ---"
+
+            if [ -z "$ENV_FILE_CONTENT_FROM_SECRET" ]; then
+              echo "오류: EC2 스크립트 내에서 ENV_FILE_CONTENT_FROM_SECRET 변수가 비어있습니다!"
+              echo "GitHub Secret 설정이나, Action의 envs 전달 방식을 확인해야 합니다."
+              exit 1
+            fi
+            
             EC2_HOME_DIR="/home/${{ secrets.EC2_USERNAME }}"
             ENV_FILE_PATH="$EC2_HOME_DIR/.env"
             JAR_SOURCE_DIR_ON_EC2="$EC2_HOME_DIR/build/libs"
