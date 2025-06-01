@@ -28,16 +28,24 @@ public class Actor {
     @Column(name = "BIOGRAPHY", length = 1000)
     private String biography;
 
+    @Column(name = "PROFILE_IMAGE_URL", length = 500)
+    private String profileImageUrl;
+
     @Builder
-    public Actor(String name, LocalDate birthDate, String biography) {
+    public Actor(String name, LocalDate birthDate, String biography, String profileImageUrl) {
         this.name = name;
         this.birthDate = birthDate;
         this.biography = biography;
+        this.profileImageUrl = profileImageUrl;
     }
 
     public void updateDetails(String name, LocalDate birthDate, String biography) {
         this.name = name;
         this.birthDate = birthDate;
         this.biography = biography;
+    }
+
+    public void updateProfileImageUrl(String profileImageUrl) {
+        this.profileImageUrl = profileImageUrl;
     }
 }
