@@ -2,9 +2,9 @@ package com.uos.picobox.domain.price.service;
 
 import com.uos.picobox.domain.price.dto.PriceSettingRequestDto;
 import com.uos.picobox.domain.price.dto.PriceSettingResponseDto;
-import com.uos.picobox.domain.price.entity.ScreeningSeatTypePrice;
-import com.uos.picobox.domain.price.entity.ScreeningSeatTypePrice.ScreeningSeatTypePriceId;
-import com.uos.picobox.domain.price.repository.ScreeningSeatTypePriceRepository;
+import com.uos.picobox.domain.price.entity.RoomTicketTypePrice;
+import com.uos.picobox.domain.price.entity.RoomTicketTypePrice.RoomTicketTypePriceId;
+import com.uos.picobox.domain.price.repository.RoomTicketTypePriceRepository;
 import com.uos.picobox.domain.room.entity.ScreeningRoom;
 import com.uos.picobox.domain.room.repository.ScreeningRoomRepository;
 import com.uos.picobox.domain.ticket.entity.TicketType;
@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class PriceSettingService {
 
-    private final ScreeningSeatTypePriceRepository priceRepository;
+    private final RoomTicketTypePriceRepository priceRepository;
     private final ScreeningRoomRepository screeningRoomRepository;
     private final TicketTypeRepository ticketTypeRepository;
 
@@ -36,29 +36,29 @@ public class PriceSettingService {
         TicketType ticketType = ticketTypeRepository.findById(requestDto.getTicketTypeId())
                 .orElseThrow(() -> new EntityNotFoundException("티켓 종류를 찾을 수 없습니다: ID " + requestDto.getTicketTypeId()));
 
-        ScreeningSeatTypePriceId id = new ScreeningSeatTypePriceId(screeningRoom.getId(), ticketType.getId());
-        Optional<ScreeningSeatTypePrice> existingPriceOpt = priceRepository.findById(id);
+        RoomTicketTypePriceId id = new RoomTicketTypePriceId(screeningRoom.getId(), ticketType.getId());
+        Optional<RoomTicketTypePrice> existingPriceOpt = priceRepository.findById(id);
 
-        ScreeningSeatTypePrice priceSetting;
+        RoomTicketTypePrice priceSetting;
         if (existingPriceOpt.isPresent()) {
             priceSetting = existingPriceOpt.get();
             priceSetting.updatePrice(requestDto.getPrice());
             log.info("가격 정보가 업데이트되었습니다: 상영관 '{}', 티켓 '{}', 가격 {}", screeningRoom.getRoomName(), ticketType.getTypeName(), requestDto.getPrice());
         } else {
-            priceSetting = ScreeningSeatTypePrice.builder()
+            priceSetting = RoomTicketTypePrice.builder()
                     .screeningRoom(screeningRoom)
                     .ticketType(ticketType)
                     .price(requestDto.getPrice())
                     .build();
             log.info("새로운 가격 정보가 설정되었습니다: 상영관 '{}', 티켓 '{}', 가격 {}", screeningRoom.getRoomName(), ticketType.getTypeName(), requestDto.getPrice());
         }
-        ScreeningSeatTypePrice savedPriceSetting = priceRepository.save(priceSetting);
+        RoomTicketTypePrice savedPriceSetting = priceRepository.save(priceSetting);
         return new PriceSettingResponseDto(savedPriceSetting);
     }
 
     public PriceSettingResponseDto getPrice(Long roomId, Long ticketTypeId) {
-        ScreeningSeatTypePriceId id = new ScreeningSeatTypePriceId(roomId, ticketTypeId);
-        ScreeningSeatTypePrice priceSetting = priceRepository.findById(id)
+        RoomTicketTypePriceId id = new RoomTicketTypePriceId(roomId, ticketTypeId);
+        RoomTicketTypePrice priceSetting = priceRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException(
                         String.format("상영관(ID:%d)의 티켓종류(ID:%d)에 대한 가격 정보를 찾을 수 없습니다.", roomId, ticketTypeId)
                 ));
@@ -69,7 +69,7 @@ public class PriceSettingService {
         if (!screeningRoomRepository.existsById(roomId)) {
             throw new EntityNotFoundException("상영관을 찾을 수 없습니다: ID " + roomId);
         }
-        List<ScreeningSeatTypePrice> prices = priceRepository.findByScreeningRoomIdWithDetails(roomId);
+        List<RoomTicketTypePrice> prices = priceRepository.findByScreeningRoomIdWithDetails(roomId);
         return prices.stream()
                 .map(PriceSettingResponseDto::new)
                 .collect(Collectors.toList());
@@ -77,7 +77,7 @@ public class PriceSettingService {
 
     @Transactional
     public void removePrice(Long roomId, Long ticketTypeId) {
-        ScreeningSeatTypePriceId id = new ScreeningSeatTypePriceId(roomId, ticketTypeId);
+        RoomTicketTypePriceId id = new RoomTicketTypePriceId(roomId, ticketTypeId);
         if (!priceRepository.existsById(id)) {
             throw new EntityNotFoundException(
                     String.format("상영관(ID:%d)의 티켓종류(ID:%d)에 대한 가격 정보를 찾을 수 없습니다.", roomId, ticketTypeId)

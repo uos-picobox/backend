@@ -8,11 +8,11 @@ import lombok.*;
 import java.io.Serializable;
 
 @Entity
-@Table(name = "SCREENING_SEAT_TYPE_PRICE")
+@Table(name = "ROOM_TICKET_TYPE_PRICE")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@IdClass(ScreeningSeatTypePrice.ScreeningSeatTypePriceId.class)
-public class ScreeningSeatTypePrice {
+@IdClass(RoomTicketTypePrice.RoomTicketTypePriceId.class)
+public class RoomTicketTypePrice {
 
     @Id
     @ManyToOne(fetch = FetchType.LAZY)
@@ -28,7 +28,7 @@ public class ScreeningSeatTypePrice {
     private Integer price;
 
     @Builder
-    public ScreeningSeatTypePrice(ScreeningRoom screeningRoom, TicketType ticketType, Integer price) {
+    public RoomTicketTypePrice(ScreeningRoom screeningRoom, TicketType ticketType, Integer price) {
         this.screeningRoom = screeningRoom;
         this.ticketType = ticketType;
         this.price = price;
@@ -41,7 +41,7 @@ public class ScreeningSeatTypePrice {
     @NoArgsConstructor(access = AccessLevel.PROTECTED)
     @AllArgsConstructor
     @EqualsAndHashCode
-    public static class ScreeningSeatTypePriceId implements Serializable {
+    public static class RoomTicketTypePriceId implements Serializable {
         private Long screeningRoom;
         private Long ticketType;
     }

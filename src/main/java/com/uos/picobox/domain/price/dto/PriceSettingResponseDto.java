@@ -1,6 +1,6 @@
 package com.uos.picobox.domain.price.dto;
 
-import com.uos.picobox.domain.price.entity.ScreeningSeatTypePrice;
+import com.uos.picobox.domain.price.entity.RoomTicketTypePrice;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 
@@ -22,7 +22,7 @@ public class PriceSettingResponseDto {
     @Schema(description = "설정된 가격", example = "15000")
     private Integer price;
 
-    public PriceSettingResponseDto(ScreeningSeatTypePrice priceSetting) {
+    public PriceSettingResponseDto(RoomTicketTypePrice priceSetting) {
         this.roomId = priceSetting.getScreeningRoom().getId();
         this.roomName = priceSetting.getScreeningRoom().getRoomName();
         this.ticketTypeId = priceSetting.getTicketType().getId();

@@ -1,6 +1,6 @@
 package com.uos.picobox.domain.ticket.service;
 
-import com.uos.picobox.domain.price.repository.ScreeningSeatTypePriceRepository;
+import com.uos.picobox.domain.price.repository.RoomTicketTypePriceRepository;
 import com.uos.picobox.domain.ticket.dto.TicketTypeRequestDto;
 import com.uos.picobox.domain.ticket.dto.TicketTypeResponseDto;
 import com.uos.picobox.domain.ticket.entity.TicketType;
@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 public class TicketTypeService {
 
     private final TicketTypeRepository ticketTypeRepository;
-    private final ScreeningSeatTypePriceRepository screeningSeatTypePriceRepository;
+    private final RoomTicketTypePriceRepository roomTicketTypePriceRepository;
 
     @Transactional
     public TicketTypeResponseDto registerTicketType(TicketTypeRequestDto requestDto) {
@@ -74,7 +74,7 @@ public class TicketTypeService {
         TicketType ticketType = ticketTypeRepository.findById(ticketTypeId)
                 .orElseThrow(() -> new EntityNotFoundException("해당 ID의 티켓 종류를 찾을 수 없습니다: " + ticketTypeId));
 
-        if (screeningSeatTypePriceRepository.existsByTicketTypeId(ticketTypeId)) {
+        if (roomTicketTypePriceRepository.existsByTicketTypeId(ticketTypeId)) {
             throw new IllegalStateException(
                     String.format("티켓 종류 '%s'(ID: %d)는 현재 가격 정책에서 사용 중이므로 삭제할 수 없습니다. 연결된 가격 설정을 먼저 삭제해주세요.",
                             ticketType.getTypeName(), ticketTypeId)
