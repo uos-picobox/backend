@@ -135,7 +135,7 @@ public class ScreeningService {
         boolean roomChanged = !screening.getScreeningRoom().getId().equals(requestDto.getRoomId());
 
         if (hasReservations && (timeChanged || movieChanged || roomChanged)) {
-            throw new IllegalStateException("이미 예매 내역이 있는 상영 스케줄의 시간, 영화 또는 상영관은 변경할 수 없습니다. 모든 예매를 취소한 후 시도해주세요.");
+            throw new IllegalStateException("이미 예매 내역이 있는 상영 스케줄의 시간, 영화 또는 상영관은 변경할 수 없습니다. 모든 예매를 취소한 후 시도해주세요. (Screening ID: " + screening.getId() + ")");
         }
 
         Movie newMovie = movieRepository.findById(requestDto.getMovieId())

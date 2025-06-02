@@ -7,6 +7,7 @@ import com.uos.picobox.domain.room.entity.ScreeningRoom;
 import com.uos.picobox.domain.room.entity.Seat;
 import com.uos.picobox.domain.room.repository.ScreeningRoomRepository;
 import com.uos.picobox.domain.room.repository.SeatRepository;
+import com.uos.picobox.domain.screening.repository.ScreeningRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +26,7 @@ public class ScreeningRoomService {
 
     private final ScreeningRoomRepository screeningRoomRepository;
     private final SeatRepository seatRepository;
+    private final ScreeningRepository screeningRepository;
 
     @Transactional
     public ScreeningRoomResponseDto registerScreeningRoom(ScreeningRoomRequestDto requestDto) {
@@ -84,12 +86,11 @@ public class ScreeningRoomService {
 
         if (requestDto.getRowDefinitions() != null) {
             if (requestDto.getRowDefinitions().isEmpty()) {
-                throw new IllegalArgumentException("좌석 정보가 없습니다.");
+                throw new IllegalArgumentException("좌석 정보가 없습니다. (상영관 이름만 수정할 row 컬럼을 아예 지우세요)");
             }
 
             log.info("상영관 ID {}의 좌석 배치 변경 요청. 기존 스케줄 확인 필요.", roomId);
-            // TODO: 실제 스케줄 확인 로직
-            boolean hasScreenings = false; //임시로 false
+            boolean hasScreenings = screeningRepository.existsByScreeningRoomId(roomId);
             if (hasScreenings) {
                 throw new IllegalStateException("이미 상영 스케줄이 잡힌 상영관의 좌석 배치는 변경할 수 없습니다. (Room ID: " + roomId + ")");
             }
@@ -128,8 +129,7 @@ public class ScreeningRoomService {
                 .orElseThrow(() -> new EntityNotFoundException("해당 ID의 상영관을 찾을 수 없습니다: " + roomId));
 
         log.info("상영관 ID {} 삭제 요청. 기존 스케줄 확인 필요.", roomId);
-        // TODO: 실제 스케줄 확인 로직
-        boolean hasScreenings = false;
+        boolean hasScreenings = screeningRepository.existsByScreeningRoomId(roomId);
         if (hasScreenings) {
             throw new IllegalStateException("해당 상영관에 상영 스케줄이 존재하여 삭제할 수 없습니다. (Room ID: " + roomId + ")");
         }
