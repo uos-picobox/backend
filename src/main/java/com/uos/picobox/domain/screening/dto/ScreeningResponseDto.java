@@ -2,6 +2,7 @@ package com.uos.picobox.domain.screening.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.uos.picobox.domain.screening.entity.Screening;
+import com.uos.picobox.domain.screening.entity.SeatStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 
@@ -57,7 +58,7 @@ public class ScreeningResponseDto {
                 this.totalSeats = screening.getScreeningSeats().size();
             }
             this.availableSeats = screening.getScreeningSeats().stream()
-                    .filter(seat -> "AVAILABLE".equalsIgnoreCase(seat.getSeatStatus()))
+                    .filter(seat -> SeatStatus.AVAILABLE == seat.getSeatStatus())
                     .count();
         } else {
             this.availableSeats = 0L;
