@@ -9,6 +9,7 @@ import com.uos.picobox.domain.screening.dto.ScreeningRequestDto;
 import com.uos.picobox.domain.screening.dto.ScreeningResponseDto;
 import com.uos.picobox.domain.screening.entity.Screening;
 import com.uos.picobox.domain.screening.entity.ScreeningSeat;
+import com.uos.picobox.domain.screening.entity.SeatStatus;
 import com.uos.picobox.domain.screening.repository.ScreeningRepository;
 import com.uos.picobox.domain.screening.repository.ScreeningSeatRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -79,7 +80,7 @@ public class ScreeningService {
         return roomSeats.stream()
                 .map(seat -> ScreeningSeat.builder()
                         .seat(seat)
-                        .seatStatus("AVAILABLE")
+                        .seatStatus(SeatStatus.AVAILABLE)
                         .build())
                 .collect(Collectors.toList());
     }
@@ -208,3 +209,4 @@ public class ScreeningService {
         log.info("상영 스케줄이 삭제되었습니다: ID {}", screeningId);
     }
 }
+

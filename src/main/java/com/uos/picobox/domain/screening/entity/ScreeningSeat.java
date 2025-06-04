@@ -32,10 +32,11 @@ public class ScreeningSeat {
 
     @Column(name = "SEAT_STATUS", nullable = false, length = 15)
     @Setter
-    private String seatStatus; // "AVAILABLE", "HOLD", "SOLD", "BLOCKED"
+    @Enumerated(EnumType.STRING)
+    private SeatStatus seatStatus;
 
     @Builder
-    public ScreeningSeat(Screening screening, Seat seat, String seatStatus) {
+    public ScreeningSeat(Screening screening, Seat seat, SeatStatus seatStatus) {
         this.screening = screening;
         this.seat = seat;
         this.seatStatus = seatStatus;
@@ -66,3 +67,4 @@ public class ScreeningSeat {
         }
     }
 }
+
