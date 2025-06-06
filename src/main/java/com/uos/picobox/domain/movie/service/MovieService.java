@@ -168,7 +168,11 @@ public class MovieService {
                 .orElseThrow(() -> new EntityNotFoundException("해당 ID의 영화를 찾을 수 없습니다: " + movieId));
         String newPosterS3Url = null;
         if (StringUtils.hasText(movie.getPosterUrl())) {
-            s3Service.delete(movie.getPosterUrl());
+            try {
+                s3Service.delete(movie.getPosterUrl());
+            } catch (SdkException e) {
+                log.error("MovieService: 포스터 삭제 실패. URL: " + movie.getPosterUrl(), e);
+            }
         }
         if (posterImageFile != null && !posterImageFile.isEmpty()) {
             try {
@@ -187,7 +191,11 @@ public class MovieService {
         Movie movie = movieRepository.findById(movieId)
                 .orElseThrow(() -> new EntityNotFoundException("해당 ID의 영화를 찾을 수 없습니다: " + movieId));
         if (StringUtils.hasText(movie.getPosterUrl())) {
-            s3Service.delete(movie.getPosterUrl());
+            try {
+                s3Service.delete(movie.getPosterUrl());
+            } catch (SdkException e) {
+                log.error("MovieService: 포스터 삭제 실패. URL: " + movie.getPosterUrl(), e);
+            }
         }
         movieRepository.delete(movie);
     }

@@ -92,8 +92,8 @@ public class ActorService {
             if (StringUtils.hasText(currentProfileImageUrl)) {
                 try {
                     s3Service.delete(currentProfileImageUrl);
-                } catch (Exception e) {
-                    log.warn("기존 프로필 이미지 S3 삭제 중 오류 발생 (무시하고 진행): " + e.getMessage());
+                } catch (SdkException e) {
+                    log.error("ActorService: 프로필 이미지 삭제 실패. URL: " + currentProfileImageUrl, e);
                 }
             }
             try {
@@ -123,8 +123,8 @@ public class ActorService {
         if (StringUtils.hasText(actor.getProfileImageUrl())) {
             try {
                 s3Service.delete(actor.getProfileImageUrl());
-            } catch (Exception e) {
-                log.warn("프로필 이미지 변경/삭제 시 기존 S3 이미지 삭제 중 오류 발생 (무시하고 진행): " + e.getMessage());
+            } catch (SdkException e) {
+                log.error("ActorService: 프로필 이미지 삭제 실패. URL: " + actor.getProfileImageUrl(), e);
             }
         }
 
@@ -160,8 +160,8 @@ public class ActorService {
         if (StringUtils.hasText(actor.getProfileImageUrl())) {
             try {
                 s3Service.delete(actor.getProfileImageUrl());
-            } catch (Exception e) {
-                log.warn("배우 삭제 중 S3 프로필 이미지 삭제 실패 (무시하고 진행): " + e.getMessage());
+            } catch (SdkException e) {
+                log.error("ActorService: 프로필 이미지 삭제 실패. URL: " + actor.getProfileImageUrl(), e);
             }
         }
 
