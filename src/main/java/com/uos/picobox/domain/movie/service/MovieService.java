@@ -123,7 +123,11 @@ public class MovieService {
 
         if (posterImageFile != null && !posterImageFile.isEmpty()) {
             if (StringUtils.hasText(movie.getPosterUrl())) {
-                s3Service.delete(movie.getPosterUrl());
+                try {
+                    s3Service.delete(movie.getPosterUrl());
+                } catch (SdkException e) {
+                    log.error("MovieService: 포스터 삭제 실패. URL: " + movie.getPosterUrl(), e);
+                }
             }
             try {
                 String newPosterS3Url = s3Service.upload(posterImageFile, "movie-posters");
