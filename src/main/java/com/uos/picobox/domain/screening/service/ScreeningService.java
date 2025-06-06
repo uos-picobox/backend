@@ -7,6 +7,7 @@ import com.uos.picobox.domain.room.entity.Seat;
 import com.uos.picobox.domain.room.repository.ScreeningRoomRepository;
 import com.uos.picobox.domain.screening.dto.ScreeningRequestDto;
 import com.uos.picobox.domain.screening.dto.ScreeningResponseDto;
+import com.uos.picobox.domain.screening.dto.ScreeningScheduleResponseDto;
 import com.uos.picobox.domain.screening.entity.Screening;
 import com.uos.picobox.domain.screening.entity.ScreeningSeat;
 import com.uos.picobox.domain.screening.entity.SeatStatus;
@@ -99,7 +100,7 @@ public class ScreeningService {
     private void validateNoOverlap(Long roomId, LocalDateTime newStartTime, LocalDateTime newEndTime, Long screeningIdToExclude, LocalDate targetDate) {
         List<Screening> existingScreenings = screeningRepository.findByScreeningRoomIdAndScreeningDateOrderByScreeningTimeAsc(roomId, targetDate);
         for (Screening existing : existingScreenings) {
-            if (screeningIdToExclude != null && existing.getId().equals(screeningIdToExclude)) {
+            if (existing.getId().equals(screeningIdToExclude)) {
                 continue;
             }
             if (existing.getMovie() == null || existing.getMovie().getDuration() == null || existing.getMovie().getDuration() <= 0) {
@@ -207,6 +208,33 @@ public class ScreeningService {
         }
         screeningRepository.delete(screening);
         log.info("상영 스케줄이 삭제되었습니다: ID {}", screeningId);
+    }
+
+    // --- 사용자용 API 메소드 ---
+
+    /**
+     * 특정 날짜의 모든 상영 스케줄 목록을 조회합니다.
+     * @param date 조회할 날짜
+     * @return 해당 날짜의 상영 스케줄 목록
+     */
+    public List<ScreeningScheduleResponseDto> getScreeningSchedulesByDate(LocalDate date) {
+        List<Screening> screenings = screeningRepository.findByScreeningDateForUser(date);
+        return screenings.stream()
+                .map(ScreeningScheduleResponseDto::new)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 특정 영화의 특정 날짜 상영 스케줄 목록을 조회합니다.
+     * @param movieId 영화 ID
+     * @param date 조회할 날짜
+     * @return 해당 영화, 해당 날짜의 상영 스케줄 목록
+     */
+    public List<ScreeningScheduleResponseDto> getScreeningSchedulesByMovieAndDate(Long movieId, LocalDate date) {
+        List<Screening> screenings = screeningRepository.findByMovieIdAndScreeningDateForUser(movieId, date);
+        return screenings.stream()
+                .map(ScreeningScheduleResponseDto::new)
+                .collect(Collectors.toList());
     }
 }
 
