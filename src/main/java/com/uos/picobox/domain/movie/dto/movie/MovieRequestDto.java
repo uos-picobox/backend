@@ -33,6 +33,10 @@ public class MovieRequestDto {
     @Schema(description = "개봉일 (yyyy-MM-dd)", example = "2019-01-23", requiredMode = Schema.RequiredMode.REQUIRED)
     private LocalDate releaseDate;
 
+    @Schema(description = "상영 종료 예정일 (yyyy-MM-dd 형식, 선택 사항). 지정하지 않으면 미정으로 간주.",
+            example = "2025-08-31", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+    private LocalDate screeningEndDate;
+
     @Size(max = 30, message = "언어는 최대 30자까지 입력 가능합니다.")
     @Schema(description = "언어", example = "한국어", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     private String language;
