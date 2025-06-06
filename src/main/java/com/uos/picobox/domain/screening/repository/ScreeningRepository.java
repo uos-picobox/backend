@@ -44,4 +44,31 @@ public interface ScreeningRepository extends JpaRepository<Screening, Long> {
             "JOIN FETCH s.screeningRoom sr " +
             "ORDER BY s.screeningTime DESC")
     List<Screening> findAllWithMovieAndRoom();
+
+    /**
+     * 사용자용: 특정 날짜의 모든 상영 스케줄을 조회합니다. (시간 오름차순 정렬)
+     * @param date 조회할 날짜
+     * @return 해당 날짜의 모든 상영 스케줄 목록
+     */
+    @Query("SELECT DISTINCT s FROM Screening s " +
+            "JOIN FETCH s.movie m " +
+            "JOIN FETCH s.screeningRoom sr " +
+            "LEFT JOIN FETCH s.screeningSeats ss " +
+            "WHERE s.screeningDate = :date " +
+            "ORDER BY s.screeningTime ASC")
+    List<Screening> findByScreeningDateForUser(@Param("date") LocalDate date);
+
+    /**
+     * 사용자용: 특정 영화의 특정 날짜 상영 스케줄을 조회합니다. (시간 오름차순 정렬)
+     * @param movieId 영화 ID
+     * @param date 조회할 날짜
+     * @return 해당 영화, 해당 날짜의 상영 스케줄 목록
+     */
+    @Query("SELECT DISTINCT s FROM Screening s " +
+            "JOIN FETCH s.movie m " +
+            "JOIN FETCH s.screeningRoom sr " +
+            "LEFT JOIN FETCH s.screeningSeats ss " +
+            "WHERE m.id = :movieId AND s.screeningDate = :date " +
+            "ORDER BY s.screeningTime ASC")
+    List<Screening> findByMovieIdAndScreeningDateForUser(@Param("movieId") Long movieId, @Param("date") LocalDate date);
 }

@@ -31,6 +31,10 @@ public class MovieResponseDto {
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     private LocalDate releaseDate;
 
+    @Schema(description = "상영 종료 예정일 (yyyy-MM-dd)", example = "2025-08-31", nullable = true)
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
+    private LocalDate screeningEndDate;
+
     @Schema(description = "언어", example = "한국어")
     private String language;
 
@@ -52,11 +56,10 @@ public class MovieResponseDto {
     @Schema(description = "포스터 이미지 URL")
     private String posterUrl;
 
-    // MovieCast 정보를 담기 위한 내부 DTO
     @Getter
     public static class MovieCastMemberResponseDto {
         @Schema(description = "배우 정보")
-        private ActorSummaryDto actor; // (actorId, name)
+        private ActorSummaryDto actor;
 
         @Schema(description = "영화 내 역할", example = "고반장")
         private String role;
@@ -88,6 +91,7 @@ public class MovieResponseDto {
         this.description = movie.getDescription();
         this.duration = movie.getDuration();
         this.releaseDate = movie.getReleaseDate();
+        this.screeningEndDate = movie.getScreeningEndDate();
         this.language = movie.getLanguage();
         this.director = movie.getDirector();
         this.distributor = new DistributorResponseDto(movie.getDistributor());

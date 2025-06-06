@@ -7,9 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 @Entity
@@ -30,10 +28,13 @@ public class Movie {
     private String description;
 
     @Column(name = "DURATION", nullable = false)
-    private Integer duration; // 분 단위
+    private Integer duration;
 
     @Column(name = "RELEASE_DATE", nullable = false)
     private LocalDate releaseDate;
+
+    @Column(name = "SCREENING_END_DATE")
+    private LocalDate screeningEndDate;
 
     @Column(name = "LANGUAGE", length = 30)
     private String language;
@@ -57,15 +58,17 @@ public class Movie {
     private Set<MovieGenreMapping> genreMappings = new HashSet<>();
 
     @OneToMany(mappedBy = "movie", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    private List<MovieCast> movieCasts = new ArrayList<>();
+    private Set<MovieCast> movieCasts = new HashSet<>();
 
     @Builder
     public Movie(String title, String description, Integer duration, LocalDate releaseDate,
-                 String language, String director, Distributor distributor, MovieRating movieRating, String posterUrl) {
+                 LocalDate screeningEndDate, String language, String director,
+                 Distributor distributor, MovieRating movieRating, String posterUrl) {
         this.title = title;
         this.description = description;
         this.duration = duration;
         this.releaseDate = releaseDate;
+        this.screeningEndDate = screeningEndDate;
         this.language = language;
         this.director = director;
         this.distributor = distributor;
@@ -74,11 +77,13 @@ public class Movie {
     }
 
     public void updateDetails(String title, String description, Integer duration, LocalDate releaseDate,
-                              String language, String director, Distributor distributor, MovieRating movieRating) {
+                              LocalDate screeningEndDate, String language, String director,
+                              Distributor distributor, MovieRating movieRating) {
         this.title = title;
         this.description = description;
         this.duration = duration;
         this.releaseDate = releaseDate;
+        this.screeningEndDate = screeningEndDate;
         this.language = language;
         this.director = director;
         this.distributor = distributor;
