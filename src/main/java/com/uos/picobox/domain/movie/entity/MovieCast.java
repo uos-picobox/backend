@@ -41,13 +41,13 @@ public class MovieCast {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         MovieCast movieCast = (MovieCast) o;
-        return Objects.equals(movie, movieCast.movie) &&
-                Objects.equals(actor, movieCast.actor);
+        return Objects.equals(this.movie.getId(), movieCast.movie.getId()) &&
+                Objects.equals(this.actor.getId(), movieCast.actor.getId());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(movie, actor);
+        return Objects.hash(this.movie.getId(), this.actor.getId());
     }
 
     @NoArgsConstructor(access = AccessLevel.PROTECTED)
