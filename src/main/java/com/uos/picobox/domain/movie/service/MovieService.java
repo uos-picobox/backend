@@ -6,6 +6,7 @@ import com.uos.picobox.domain.movie.dto.movie.MovieResponseDto;
 import com.uos.picobox.domain.movie.entity.*;
 import com.uos.picobox.domain.movie.repository.*;
 import com.uos.picobox.global.service.S3Service;
+import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -18,10 +19,7 @@ import software.amazon.awssdk.core.exception.SdkException;
 
 import java.io.IOException;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -30,6 +28,7 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class MovieService {
 
+    private final EntityManager entityManager;
     private final MovieRepository movieRepository;
     private final DistributorRepository distributorRepository;
     private final MovieRatingRepository movieRatingRepository;
@@ -139,7 +138,12 @@ public class MovieService {
         }
 
         if (requestDto.getGenreIds() != null) {
+            // 1. 기존 매핑을 컬렉션에서 제거 -> orphanRemoval=true로 인해 삭제 대상으로 표시됨
             movie.clearGenreMappings();
+            // 2. DB에 DELETE 쿼리를 즉시 실행하고 세션을 정리
+            entityManager.flush();
+
+            // 3. 이제 세션이 깨끗해진 상태에서 새로운 매핑 추가
             if (!requestDto.getGenreIds().isEmpty()) {
                 requestDto.getGenreIds().forEach(genreId -> {
                     MovieGenre movieGenre = movieGenreRepository.findById(genreId)
@@ -149,8 +153,14 @@ public class MovieService {
             }
         }
 
+        // --- 출연진 매핑 업데이트 로직 변경 ---
         if (requestDto.getMovieCasts() != null) {
+            // 1. 기존 매핑을 컬렉션에서 제거
             movie.clearMovieCasts();
+            // 2. DB에 DELETE 쿼리를 즉시 실행하고 세션을 정리
+            entityManager.flush();
+
+            // 3. 이제 새로운 매핑 추가
             if (!requestDto.getMovieCasts().isEmpty()) {
                 requestDto.getMovieCasts().forEach(castDto -> {
                     Actor actor = actorRepository.findById(castDto.getActorId())
