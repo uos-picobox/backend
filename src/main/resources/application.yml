@@ -53,3 +53,9 @@ springdoc:
   swagger-ui:
     tags-sorter: alpha
     operations-sorter: method
+
+logging:
+  level:
+    root: INFO
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql: WARN
