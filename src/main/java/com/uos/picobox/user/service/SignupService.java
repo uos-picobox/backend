@@ -20,10 +20,10 @@ public class SignupService {
     @Transactional
     public SignupResponseDto registerCustomer(SignupRequestDto signupRequestDto) {
         if (customerRepository.existsByLoginId(signupRequestDto.getLoginId())) {
-            throw new IllegalArgumentException("Customer with loginId " + signupRequestDto.getLoginId() + " already exists.");
+            throw new IllegalArgumentException("loginId: " + signupRequestDto.getLoginId() + "는 이미 사용 중인 로그인Id입니다.");
         }
         if (customerRepository.existsByEmail(signupRequestDto.getEmail())) {
-            throw new IllegalArgumentException("Customer with email " + signupRequestDto.getEmail() + " already exists.");
+            throw new IllegalArgumentException("email: " + signupRequestDto.getEmail() + "는 이미 사용 중인 이메일 입니다.");
         }
 
         String encodedPassword = passwordEncoder.encode(signupRequestDto.getPassword());
