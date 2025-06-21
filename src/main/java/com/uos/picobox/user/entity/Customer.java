@@ -65,4 +65,15 @@ public class Customer {
         this.lastLoginAt = LocalDateTime.now();
         this.isActive = true;
     }
+
+    public void usePoints(int pointsToUse) {
+        if (this.points < pointsToUse) {
+            throw new IllegalArgumentException("보유 포인트가 부족합니다.");
+        }
+        this.points -= pointsToUse;
+    }
+
+    public void addPoints(int pointsToAdd) {
+        this.points += pointsToAdd;
+    }
 }
