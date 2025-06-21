@@ -8,9 +8,9 @@ import lombok.Setter;
 @Getter
 @Setter
 @AllArgsConstructor
-public class SignoutResponseDto {
-    @Schema(description = "로그인 아이디", example = "user123", requiredMode = Schema.RequiredMode.REQUIRED)
-    private String loginId;
+public class GuestSignoutResponseDto {
+    @Schema(description = "이메일 주소", example = "user@example.com", requiredMode = Schema.RequiredMode.REQUIRED)
+    private String email;
 
     @Schema(description = "login session info", example = "a3dxg-923a12-xyz", requiredMode = Schema.RequiredMode.REQUIRED)
     private String sessionId;

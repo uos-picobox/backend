@@ -12,7 +12,7 @@ import java.util.Random;
 
 @Component
 @RequiredArgsConstructor
-public class EmailUtil {
+public class EmailUtils {
     private final JavaMailSender mailSender;
     @Value("${spring.mail.username}")
     private String sender;

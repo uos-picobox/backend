@@ -2,7 +2,7 @@ package com.uos.picobox.global.service;
 
 import com.uos.picobox.user.dto.AuthMailRequestDto;
 import com.uos.picobox.user.dto.MailRequestDto;
-import com.uos.picobox.global.utils.EmailUtil;
+import com.uos.picobox.global.utils.EmailUtils;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +17,7 @@ import java.time.format.DateTimeFormatter;
 @Service
 @RequiredArgsConstructor
 public class EmailService {
-    private final EmailUtil emailUtil;
+    private final EmailUtils emailUtils;
     private final CacheManager cacheManager;
 
     public void sendAuthMail(MailRequestDto mailRequestDto) throws MessagingException {
@@ -26,7 +26,7 @@ public class EmailService {
 
         String email = mailRequestDto.getEmail();
         String purpose = mailRequestDto.getPurpose();
-        String authCode = emailUtil.createAuthCode();
+        String authCode = emailUtils.createAuthCode();
         String body = """
             <html>
               <body style="font-family: 'Apple SD Gothic Neo', Arial, sans-serif; background-color: #f6f6f6; padding: 40px;">
@@ -56,8 +56,8 @@ public class EmailService {
               </body>
             </html>
             """.formatted(purpose, authCode, formattedExpiration);
-        MimeMessage newMail = emailUtil.createMail(email,purpose +" 인증 번호를 보내드려요.", body);
-        emailUtil.sendMail(newMail);
+        MimeMessage newMail = emailUtils.createMail(email,purpose +" 인증 번호를 보내드려요.", body);
+        emailUtils.sendMail(newMail);
         Cache cache = cacheManager.getCache("emailAuthCode");
         Objects.requireNonNull(cache).put(email, authCode);
     }
