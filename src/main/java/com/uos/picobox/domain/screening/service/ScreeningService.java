@@ -12,6 +12,10 @@ import com.uos.picobox.domain.screening.entity.SeatStatus;
 import com.uos.picobox.domain.screening.repository.ScreeningRepository;
 import com.uos.picobox.domain.screening.repository.ScreeningSeatRepository;
 import com.uos.picobox.domain.reservation.repository.ReservationRepository;
+import com.uos.picobox.domain.price.entity.RoomTicketTypePrice;
+import com.uos.picobox.domain.price.repository.RoomTicketTypePriceRepository;
+import com.uos.picobox.domain.ticket.entity.TicketType;
+import com.uos.picobox.domain.ticket.repository.TicketTypeRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,6 +40,8 @@ public class ScreeningService {
     private final ScreeningRoomRepository screeningRoomRepository;
     private final ScreeningSeatRepository screeningSeatRepository;
     private final ReservationRepository reservationRepository;
+    private final RoomTicketTypePriceRepository roomTicketTypePriceRepository;
+    private final TicketTypeRepository ticketTypeRepository;
 
     @Transactional
     public ScreeningResponseDto registerScreening(ScreeningRequestDto requestDto) {
@@ -254,6 +260,35 @@ public class ScreeningService {
                 .collect(Collectors.toList());
 
         return ScreeningSeatsResponseDto.toDto(screening, seatDtos);
+    }
+
+    /**
+     * 특정 상영의 티켓 유형별 가격 정보를 조회합니다.
+     * @param screeningId 상영 ID
+     * @return 티켓 유형별 가격 정보
+     */
+    public ScreeningTicketPricesResponseDto getTicketPricesForScreening(Long screeningId) {
+        Screening screening = screeningRepository.findByIdWithDetails(screeningId)
+                .orElseThrow(() -> new EntityNotFoundException("해당 ID의 상영 스케줄을 찾을 수 없습니다: " + screeningId));
+
+        // 해당 상영관의 모든 티켓 유형 가격 조회
+        List<RoomTicketTypePrice> roomPrices = roomTicketTypePriceRepository.findByScreeningRoomIdWithDetails(screening.getScreeningRoom().getId());
+        
+        List<ScreeningTicketPricesResponseDto.TicketPriceInfo> ticketPrices = new ArrayList<>();
+        
+        for (RoomTicketTypePrice roomPrice : roomPrices) {
+            ticketPrices.add(new ScreeningTicketPricesResponseDto.TicketPriceInfo(
+                    roomPrice.getTicketType().getId(),
+                    roomPrice.getTicketType().getTypeName(),
+                    roomPrice.getPrice()
+            ));
+        }
+
+        return new ScreeningTicketPricesResponseDto(
+                screening.getId(),
+                screening.getScreeningRoom().getId(),
+                ticketPrices
+        );
     }
 }
 

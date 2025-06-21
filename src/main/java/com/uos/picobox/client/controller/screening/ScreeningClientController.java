@@ -2,6 +2,7 @@ package com.uos.picobox.client.controller.screening;
 
 import com.uos.picobox.domain.screening.dto.ScreeningScheduleResponseDto;
 import com.uos.picobox.domain.screening.dto.ScreeningSeatsResponseDto;
+import com.uos.picobox.domain.screening.dto.ScreeningTicketPricesResponseDto;
 import com.uos.picobox.domain.screening.service.ScreeningService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -75,5 +76,19 @@ public class ScreeningClientController {
             @PathVariable Long screeningId) {
         ScreeningSeatsResponseDto seatsResponse = screeningService.getSeatsForScreening(screeningId);
         return ResponseEntity.ok(seatsResponse);
+    }
+
+    /**
+     * 특정 상영의 티켓 유형별 가격 정보를 조회합니다.
+     */
+    @GetMapping("/screenings/{screeningId}/ticket-prices")
+    @Operation(summary = "상영 티켓 가격 조회", description = "특정 상영의 티켓 유형별 가격 정보를 조회합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "티켓 가격 조회 성공"),
+            @ApiResponse(responseCode = "404", description = "상영 정보를 찾을 수 없음")
+    })
+    public ResponseEntity<ScreeningTicketPricesResponseDto> getTicketPricesForScreening(@PathVariable Long screeningId) {
+        ScreeningTicketPricesResponseDto ticketPrices = screeningService.getTicketPricesForScreening(screeningId);
+        return ResponseEntity.ok(ticketPrices);
     }
 }
