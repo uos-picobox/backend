@@ -220,11 +220,13 @@ public class ScreeningService {
 
     /**
      * 특정 날짜의 모든 상영 스케줄 목록을 조회합니다.
+     * 상영 시작 후 10분까지는 예매 가능합니다.
      * @param date 조회할 날짜
-     * @return 해당 날짜의 상영 스케줄 목록
+     * @return 해당 날짜의 상영 스케줄 목록 (예매 가능한 상영만)
      */
     public List<ScreeningScheduleResponseDto> getScreeningSchedulesByDate(LocalDate date) {
-        List<Screening> screenings = screeningRepository.findByScreeningDateForUser(date);
+        LocalDateTime currentDateTimeMinus10Min = LocalDateTime.now().minusMinutes(10);
+        List<Screening> screenings = screeningRepository.findByScreeningDateForUser(date, currentDateTimeMinus10Min);
         return screenings.stream()
                 .map(ScreeningScheduleResponseDto::new)
                 .collect(Collectors.toList());
@@ -232,12 +234,14 @@ public class ScreeningService {
 
     /**
      * 특정 영화의 특정 날짜 상영 스케줄 목록을 조회합니다.
+     * 상영 시작 후 10분까지는 예매 가능합니다.
      * @param movieId 영화 ID
      * @param date 조회할 날짜
-     * @return 해당 영화, 해당 날짜의 상영 스케줄 목록
+     * @return 해당 영화, 해당 날짜의 상영 스케줄 목록 (예매 가능한 상영만)
      */
     public List<ScreeningScheduleResponseDto> getScreeningSchedulesByMovieAndDate(Long movieId, LocalDate date) {
-        List<Screening> screenings = screeningRepository.findByMovieIdAndScreeningDateForUser(movieId, date);
+        LocalDateTime currentDateTimeMinus10Min = LocalDateTime.now().minusMinutes(10);
+        List<Screening> screenings = screeningRepository.findByMovieIdAndScreeningDateForUser(movieId, date, currentDateTimeMinus10Min);
         return screenings.stream()
                 .map(ScreeningScheduleResponseDto::new)
                 .collect(Collectors.toList());
