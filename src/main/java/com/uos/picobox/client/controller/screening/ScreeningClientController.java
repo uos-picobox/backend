@@ -1,6 +1,8 @@
 package com.uos.picobox.client.controller.screening;
 
 import com.uos.picobox.domain.screening.dto.ScreeningScheduleResponseDto;
+import com.uos.picobox.domain.screening.dto.ScreeningSeatsResponseDto;
+import com.uos.picobox.domain.screening.dto.ScreeningTicketPricesResponseDto;
 import com.uos.picobox.domain.screening.service.ScreeningService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -15,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.util.List;
 
-@Tag(name = "사용자 - 상영 스케줄 조회", description = "사용자 대상 상영 스케줄 조회 API")
+@Tag(name = "04. 사용자 - 상영 스케줄 조회", description = "사용자 대상 상영 스케줄 조회 API")
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
@@ -60,5 +62,33 @@ public class ScreeningClientController {
             return ResponseEntity.noContent().build();
         }
         return ResponseEntity.ok(schedules);
+    }
+
+    @Operation(summary = "특정 상영의 좌석 상태 전체 조회",
+            description = "주어진 상영 ID에 해당하는 상영관의 모든 좌석 상태(예매 가능, 판매 완료 등) 목록을 조회합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "좌석 상태 조회 성공"),
+            @ApiResponse(responseCode = "404", description = "해당 상영 정보를 찾을 수 없습니다.")
+    })
+    @GetMapping("/screenings/{screeningId}/seats")
+    public ResponseEntity<ScreeningSeatsResponseDto> getScreeningSeats(
+            @Parameter(description = "좌석을 조회할 상영의 ID", required = true, example = "1")
+            @PathVariable Long screeningId) {
+        ScreeningSeatsResponseDto seatsResponse = screeningService.getSeatsForScreening(screeningId);
+        return ResponseEntity.ok(seatsResponse);
+    }
+
+    /**
+     * 특정 상영의 티켓 유형별 가격 정보를 조회합니다.
+     */
+    @GetMapping("/screenings/{screeningId}/ticket-prices")
+    @Operation(summary = "상영 티켓 가격 조회", description = "특정 상영의 티켓 유형별 가격 정보를 조회합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "티켓 가격 조회 성공"),
+            @ApiResponse(responseCode = "404", description = "상영 정보를 찾을 수 없음")
+    })
+    public ResponseEntity<ScreeningTicketPricesResponseDto> getTicketPricesForScreening(@PathVariable Long screeningId) {
+        ScreeningTicketPricesResponseDto ticketPrices = screeningService.getTicketPricesForScreening(screeningId);
+        return ResponseEntity.ok(ticketPrices);
     }
 }

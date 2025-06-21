@@ -4,7 +4,7 @@ import com.uos.picobox.user.dto.AuthMailRequestDto;
 import com.uos.picobox.user.dto.MailRequestDto;
 import com.uos.picobox.user.dto.SignupRequestDto;
 import com.uos.picobox.user.dto.SignupResponseDto;
-import com.uos.picobox.user.service.EmailService;
+import com.uos.picobox.global.service.EmailService;
 import com.uos.picobox.user.service.SignupService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -23,9 +23,10 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 //"회원가입, 로그인 아이디 중복 검사, 이메일 중복 검사, 이메일 인증 코드 전송, 이메일 인증 코드 인증"
-@Tag(name = "회원 가입", description = "회원가입 관련 API를 제공합니다.")
+@Tag(name = "회원 - 00. 회원 가입", description = "회원가입 관련 API를 제공합니다.")
+
 @RestController
-@RequestMapping("/api/user/signup")
+@RequestMapping("/api/signup/customer")
 @RequiredArgsConstructor
 public class SignupController {
 
@@ -42,7 +43,7 @@ public class SignupController {
     public ResponseEntity<?> signup(
             @Valid @RequestBody SignupRequestDto signupRequestDto) {
         if (!signupRequestDto.getPassword().equals(signupRequestDto.getRepeatPassword())) {
-            throw new IllegalArgumentException("Passwords do not match");
+            throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
         }
         SignupResponseDto response = signupService.registerCustomer(signupRequestDto);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -96,7 +97,7 @@ public class SignupController {
             @Valid
             MailRequestDto mailRequestDto) throws MessagingException {
         if (!signupService.isEmailAvailable(mailRequestDto.getEmail())) {
-            throw new IllegalArgumentException("Email address is already in use.");
+            throw new IllegalArgumentException("이미 사용 중인 이메일입니다. 다른 이메일을 입력해주세요.");
         }
         emailService.sendAuthMail(mailRequestDto);
         return ResponseEntity.status(HttpStatus.OK).build();
@@ -114,7 +115,7 @@ public class SignupController {
             @Valid
             AuthMailRequestDto authMailRequestDto) {
         if (!signupService.isEmailAvailable(authMailRequestDto.getEmail())) {
-            throw new IllegalArgumentException("Email address is already in use.");
+            throw new IllegalArgumentException("이미 사용 중인 이메일입니다. 다른 이메일을 입력해주세요.");
         }
         emailService.checkAuthCode(authMailRequestDto);
         return ResponseEntity.status(HttpStatus.OK).build();

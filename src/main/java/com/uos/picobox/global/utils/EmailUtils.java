@@ -1,4 +1,4 @@
-package com.uos.picobox.user.utils;
+package com.uos.picobox.global.utils;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
@@ -12,7 +12,7 @@ import java.util.Random;
 
 @Component
 @RequiredArgsConstructor
-public class EmailUtil {
+public class EmailUtils {
     private final JavaMailSender mailSender;
     @Value("${spring.mail.username}")
     private String sender;
