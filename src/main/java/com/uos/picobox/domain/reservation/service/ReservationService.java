@@ -26,6 +26,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -122,12 +123,31 @@ public class ReservationService {
         Screening screening = screeningRepository.findByIdWithDetails(dto.getScreeningId())
                 .orElseThrow(() -> new EntityNotFoundException("상영 정보를 찾을 수 없습니다: " + dto.getScreeningId()));
 
+        // 티켓 유형별 인원수 검증
+        int totalPersonCount = dto.getTicketTypes().stream()
+                .mapToInt(ReservationRequestDto.TicketTypeInfo::getCount)
+                .sum();
+        
+        if (totalPersonCount != dto.getSeatIds().size()) {
+            throw new IllegalArgumentException("선택한 인원수(" + totalPersonCount + "명)와 좌석 수(" + dto.getSeatIds().size() + "개)가 일치하지 않습니다.");
+        }
+
+        // 모든 좌석이 선점되어 있는지 확인
+        for (Long seatId : dto.getSeatIds()) {
+            ScreeningSeat screeningSeat = screeningSeatRepository.findById(new ScreeningSeat.ScreeningSeatId(dto.getScreeningId(), seatId))
+                    .orElseThrow(() -> new EntityNotFoundException("좌석 정보를 찾을 수 없습니다: " + seatId));
+            if (screeningSeat.getSeatStatus() != SeatStatus.HOLD) {
+                throw new IllegalStateException("선점되지 않은 좌석을 예매할 수 없습니다: " + seatId);
+            }
+        }
+
+        // 총 금액 계산
         int totalAmount = 0;
-        for (ReservationRequestDto.TicketInfo ticketInfo : dto.getTickets()) {
+        for (ReservationRequestDto.TicketTypeInfo ticketTypeInfo : dto.getTicketTypes()) {
             RoomTicketTypePrice priceInfo = roomTicketTypePriceRepository.findById(
-                    new RoomTicketTypePrice.RoomTicketTypePriceId(screening.getScreeningRoom().getId(), ticketInfo.getTicketTypeId())
-            ).orElseThrow(() -> new EntityNotFoundException("해당 좌석 종류의 가격 정보를 찾을 수 없습니다."));
-            totalAmount += priceInfo.getPrice();
+                    new RoomTicketTypePrice.RoomTicketTypePriceId(screening.getScreeningRoom().getId(), ticketTypeInfo.getTicketTypeId())
+            ).orElseThrow(() -> new EntityNotFoundException("해당 티켓 종류의 가격 정보를 찾을 수 없습니다."));
+            totalAmount += priceInfo.getPrice() * ticketTypeInfo.getCount();
         }
 
         customer.usePoints(dto.getUsedPoints());
@@ -140,29 +160,34 @@ public class ReservationService {
                 .paymentStatus(PaymentStatus.PENDING)
                 .build();
 
-        List<String> seatNumbers = dto.getTickets().stream()
-                .map(ticketInfo -> {
-                    ScreeningSeat screeningSeat = screeningSeatRepository.findById(new ScreeningSeat.ScreeningSeatId(dto.getScreeningId(), ticketInfo.getSeatId()))
-                            .orElseThrow(() -> new EntityNotFoundException("좌석 정보를 찾을 수 없습니다: " + ticketInfo.getSeatId()));
-                    if(screeningSeat.getSeatStatus() != SeatStatus.HOLD) {
-                        throw new IllegalStateException("선점되지 않은 좌석을 예매할 수 없습니다: " + ticketInfo.getSeatId());
-                    }
-                    RoomTicketTypePrice priceInfo = roomTicketTypePriceRepository.findById(
-                            new RoomTicketTypePrice.RoomTicketTypePriceId(screening.getScreeningRoom().getId(), ticketInfo.getTicketTypeId())
-                    ).orElseThrow(() -> new EntityNotFoundException("가격 정보를 찾을 수 없습니다."));
+        // 티켓 생성 로직 - 좌석을 티켓 유형별로 순서대로 배정
+        List<String> seatNumbers = new ArrayList<>();
+        int seatIndex = 0;
+        
+        for (ReservationRequestDto.TicketTypeInfo ticketTypeInfo : dto.getTicketTypes()) {
+            RoomTicketTypePrice priceInfo = roomTicketTypePriceRepository.findById(
+                    new RoomTicketTypePrice.RoomTicketTypePriceId(screening.getScreeningRoom().getId(), ticketTypeInfo.getTicketTypeId())
+            ).orElseThrow(() -> new EntityNotFoundException("가격 정보를 찾을 수 없습니다."));
 
-                    Ticket ticket = Ticket.builder()
-                            .reservation(reservation)
-                            .screeningId(dto.getScreeningId())
-                            .seatId(ticketInfo.getSeatId())
-                            .ticketTypeId(ticketInfo.getTicketTypeId())
-                            .price(priceInfo.getPrice())
-                            .ticketStatus(TicketStatus.ISSUED)
-                            .build();
-                    reservation.addTicket(ticket);
-                    return screeningSeat.getSeat().getSeatNumber();
-                })
-                .collect(Collectors.toList());
+            // 해당 티켓 유형의 인원수만큼 티켓 생성
+            for (int i = 0; i < ticketTypeInfo.getCount(); i++) {
+                Long seatId = dto.getSeatIds().get(seatIndex++);
+                
+                ScreeningSeat screeningSeat = screeningSeatRepository.findById(new ScreeningSeat.ScreeningSeatId(dto.getScreeningId(), seatId))
+                        .orElseThrow(() -> new EntityNotFoundException("좌석 정보를 찾을 수 없습니다: " + seatId));
+
+                Ticket ticket = Ticket.builder()
+                        .reservation(reservation)
+                        .screeningId(dto.getScreeningId())
+                        .seatId(seatId)
+                        .ticketTypeId(ticketTypeInfo.getTicketTypeId())
+                        .price(priceInfo.getPrice())
+                        .ticketStatus(TicketStatus.ISSUED)
+                        .build();
+                reservation.addTicket(ticket);
+                seatNumbers.add(screeningSeat.getSeat().getSeatNumber());
+            }
+        }
 
         if (dto.getUsedPoints() > 0) {
             PointHistory pointHistory = PointHistory.builder()
@@ -175,7 +200,7 @@ public class ReservationService {
         }
 
         reservationRepository.save(reservation);
-        log.info("결제 대기 상태의 예매 생성 완료: reservationId={}", reservation.getId());
+        log.info("결제 대기 상태의 예매 생성 완료: reservationId={}, 총 인원: {}명", reservation.getId(), totalPersonCount);
 
         return new ReservationResponseDto(reservation, dto.getUsedPoints(), finalAmount, screening.getMovie().getTitle(), seatNumbers);
     }
