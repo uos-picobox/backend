@@ -1,8 +1,8 @@
-package com.uos.picobox.user.service;
+package com.uos.picobox.global.service;
 
 import com.uos.picobox.user.dto.AuthMailRequestDto;
 import com.uos.picobox.user.dto.MailRequestDto;
-import com.uos.picobox.user.utils.EmailUtil;
+import com.uos.picobox.global.utils.EmailUtil;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;

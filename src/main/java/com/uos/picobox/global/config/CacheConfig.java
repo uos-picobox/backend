@@ -22,7 +22,9 @@ public class CacheConfig {
     public CacheManager cacheManager() {
         Map<String, Caffeine<Object, Object>> caffeineConfigs = new HashMap<>();
         caffeineConfigs.put("emailAuthCode", Caffeine.newBuilder().expireAfterWrite(5, TimeUnit.MINUTES));
-        caffeineConfigs.put("session", Caffeine.newBuilder().expireAfterWrite(1, TimeUnit.HOURS));
+        caffeineConfigs.put("customerSession", Caffeine.newBuilder().expireAfterWrite(1, TimeUnit.HOURS));
+        caffeineConfigs.put("guestSession", Caffeine.newBuilder().expireAfterWrite(1, TimeUnit.HOURS));
+        caffeineConfigs.put("adminSession", Caffeine.newBuilder().expireAfterWrite(1, TimeUnit.HOURS));
 
         SimpleCacheManager cacheManager = new SimpleCacheManager();
         List<CaffeineCache> caches = caffeineConfigs.entrySet().stream()

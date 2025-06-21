@@ -4,7 +4,7 @@ import com.uos.picobox.user.dto.AuthMailRequestDto;
 import com.uos.picobox.user.dto.MailRequestDto;
 import com.uos.picobox.user.dto.SignupRequestDto;
 import com.uos.picobox.user.dto.SignupResponseDto;
-import com.uos.picobox.user.service.EmailService;
+import com.uos.picobox.global.service.EmailService;
 import com.uos.picobox.user.service.SignupService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
