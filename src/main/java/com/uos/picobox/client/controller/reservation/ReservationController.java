@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@Tag(name = "사용자 - 티켓 예매", description = "좌석 선택, 예매, 결제 완료 처리 API")
+@Tag(name = "05. 사용자 - 티켓 예매", description = "좌석 선택, 예매, 결제 완료 처리 API")
 @RestController
 @RequestMapping("/api/reservations")
 @RequiredArgsConstructor
