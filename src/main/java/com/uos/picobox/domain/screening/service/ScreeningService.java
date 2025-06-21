@@ -5,14 +5,13 @@ import com.uos.picobox.domain.movie.repository.MovieRepository;
 import com.uos.picobox.domain.room.entity.ScreeningRoom;
 import com.uos.picobox.domain.room.entity.Seat;
 import com.uos.picobox.domain.room.repository.ScreeningRoomRepository;
-import com.uos.picobox.domain.screening.dto.ScreeningRequestDto;
-import com.uos.picobox.domain.screening.dto.ScreeningResponseDto;
-import com.uos.picobox.domain.screening.dto.ScreeningScheduleResponseDto;
+import com.uos.picobox.domain.screening.dto.*;
 import com.uos.picobox.domain.screening.entity.Screening;
 import com.uos.picobox.domain.screening.entity.ScreeningSeat;
 import com.uos.picobox.domain.screening.entity.SeatStatus;
 import com.uos.picobox.domain.screening.repository.ScreeningRepository;
 import com.uos.picobox.domain.screening.repository.ScreeningSeatRepository;
+import com.uos.picobox.domain.reservation.repository.ReservationRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,6 +35,7 @@ public class ScreeningService {
     private final MovieRepository movieRepository;
     private final ScreeningRoomRepository screeningRoomRepository;
     private final ScreeningSeatRepository screeningSeatRepository;
+    private final ReservationRepository reservationRepository;
 
     @Transactional
     public ScreeningResponseDto registerScreening(ScreeningRequestDto requestDto) {
@@ -126,8 +126,8 @@ public class ScreeningService {
         Screening screening = screeningRepository.findByIdWithDetails(screeningId)
                 .orElseThrow(() -> new EntityNotFoundException("해당 ID의 상영 스케줄을 찾을 수 없습니다: " + screeningId));
 
-        // TODO: 실제 예매 확인 로직
-        boolean hasReservations = false; // 임시로 false
+        // 실제 예매 확인 로직
+        boolean hasReservations = reservationRepository.existsByScreeningId(screeningId);
 
         LocalDateTime newScreeningStartTime = requestDto.getScreeningTime();
         LocalDate newScreeningDate = newScreeningStartTime.toLocalDate();
@@ -201,8 +201,8 @@ public class ScreeningService {
     public void removeScreening(Long screeningId) {
         Screening screening = screeningRepository.findById(screeningId)
                 .orElseThrow(() -> new EntityNotFoundException("해당 ID의 상영 스케줄을 찾을 수 없습니다: " + screeningId));
-        // TODO: 실제 예매 확인 로직
-        boolean hasReservations = false;
+        // 실제 예매 확인 로직
+        boolean hasReservations = reservationRepository.existsByScreeningId(screeningId);
         if (hasReservations) {
             throw new IllegalStateException("이미 예매가 진행된 상영 스케줄은 삭제할 수 없습니다. (Screening ID: " + screeningId + ")");
         }
@@ -235,6 +235,25 @@ public class ScreeningService {
         return screenings.stream()
                 .map(ScreeningScheduleResponseDto::new)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * 특정 상영의 전체 좌석 상태 목록을 조회합니다. (사용자용)
+     * @param screeningId 상영 ID
+     * @return 좌석 배치 및 상태 정보
+     */
+    public ScreeningSeatsResponseDto getSeatsForScreening(Long screeningId) {
+        // findByIdWithDetails를 사용하면 상영 정보와 좌석 정보가 모두 fetch join 되어 쿼리 효율이 좋습니다.
+        Screening screening = screeningRepository.findByIdWithDetails(screeningId)
+                .orElseThrow(() -> new EntityNotFoundException("해당 ID의 상영 스케줄을 찾을 수 없습니다: " + screeningId));
+
+        List<ScreeningSeatStatusDto> seatDtos = screening.getScreeningSeats().stream()
+                .map(ScreeningSeatStatusDto::fromEntity)
+                // 좌석 번호 순으로 정렬 (예: A1, A2, B1, B2...)
+                .sorted(Comparator.comparing(ScreeningSeatStatusDto::getSeatNumber))
+                .collect(Collectors.toList());
+
+        return ScreeningSeatsResponseDto.toDto(screening, seatDtos);
     }
 }
 
