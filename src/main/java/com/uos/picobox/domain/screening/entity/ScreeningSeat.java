@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
 import java.util.Objects;
 
 @Entity
@@ -34,6 +35,18 @@ public class ScreeningSeat {
     @Setter
     @Enumerated(EnumType.STRING)
     private SeatStatus seatStatus;
+
+    @Setter
+    @Column(name = "HOLD_EXPIRES_AT")
+    private LocalDateTime holdExpiresAt;
+
+    @Setter
+    @Column(name = "HOLD_CUSTOMER_ID")
+    private Long holdCustomerId;
+
+    @Setter
+    @Column(name = "HOLD_GUEST_ID")
+    private Long holdGuestId;
 
     @Builder
     public ScreeningSeat(Screening screening, Seat seat, SeatStatus seatStatus) {
