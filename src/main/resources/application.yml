@@ -14,10 +14,10 @@ spring:
         oracle.net.tns_admin: ${TNS_ADMIN}
       connection-test-query: SELECT 1 FROM DUAL
   jpa:
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
-        format_sql: true
+#        format_sql: true
         dialect: org.hibernate.dialect.OracleDialect
   mail:
     protocol: smtp
@@ -53,3 +53,9 @@ springdoc:
   swagger-ui:
     tags-sorter: alpha
     operations-sorter: method
+
+logging:
+  level:
+    root: INFO
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql: WARN

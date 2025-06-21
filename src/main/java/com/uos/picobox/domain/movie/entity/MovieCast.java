@@ -36,6 +36,20 @@ public class MovieCast {
         this.role = role;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        MovieCast movieCast = (MovieCast) o;
+        return Objects.equals(this.movie.getId(), movieCast.movie.getId()) &&
+                Objects.equals(this.actor.getId(), movieCast.actor.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(this.movie.getId(), this.actor.getId());
+    }
+
     @NoArgsConstructor(access = AccessLevel.PROTECTED)
     public static class MovieCastId implements Serializable {
         private Long movie;

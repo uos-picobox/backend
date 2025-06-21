@@ -158,7 +158,7 @@ public class AdminMovieController {
     })
     @GetMapping("/get")
     public ResponseEntity<List<MovieResponseDto>> getAllMovies() {
-        List<MovieResponseDto> movies = movieService.findAllMovies();
+        List<MovieResponseDto> movies = movieService.findAllMoviesForAdmin();
         return ResponseEntity.ok(movies);
     }
 
@@ -171,7 +171,7 @@ public class AdminMovieController {
     @GetMapping("/get/{movieId}")
     public ResponseEntity<MovieResponseDto> getMovieById(
             @Parameter(description = "조회할 영화 ID", required = true) @PathVariable Long movieId) {
-        MovieResponseDto movie = movieService.findMovieById(movieId);
+        MovieResponseDto movie = movieService.getMovieDetail(movieId);
         return ResponseEntity.ok(movie);
     }
 

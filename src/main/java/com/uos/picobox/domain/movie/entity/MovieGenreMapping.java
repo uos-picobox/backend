@@ -33,6 +33,20 @@ public class MovieGenreMapping {
         this.movieGenre = movieGenre;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        MovieGenreMapping that = (MovieGenreMapping) o;
+        return Objects.equals(this.movie.getId(), that.movie.getId()) &&
+                Objects.equals(this.movieGenre.getId(), that.movieGenre.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(this.movie.getId(), this.movieGenre.getId());
+    }
+
     @NoArgsConstructor(access = AccessLevel.PROTECTED)
     public static class MovieGenreMappingId implements Serializable {
         private Long movie;
