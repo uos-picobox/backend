@@ -4,6 +4,8 @@ import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.info.License;
+import io.swagger.v3.oas.models.security.SecurityRequirement;
+import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -21,8 +23,18 @@ public class SwaggerConfig {
                         .name("Apache License Version 2.0")
                         .url("http://www.apache.org/licenses/LICENSE-2.0"));
 
+        // 🔒 SecurityScheme 설정
+        SecurityScheme securityScheme = new SecurityScheme()
+                .type(SecurityScheme.Type.APIKEY)
+                .in(SecurityScheme.In.HEADER)
+                .name("Authorization")
+                .description("세션 ID를 Authorization 헤더에 입력하세요");
+
+        SecurityRequirement securityRequirement = new SecurityRequirement().addList("sessionAuth");
+
         return new OpenAPI()
-                .components(new Components())
+                .components(new Components().addSecuritySchemes("sessionAuth", securityScheme))
+                .addSecurityItem(securityRequirement)
                 .info(info);
     }
 }

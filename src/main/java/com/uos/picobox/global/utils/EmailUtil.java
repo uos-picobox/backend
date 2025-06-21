@@ -1,4 +1,4 @@
-package com.uos.picobox.user.utils;
+package com.uos.picobox.global.utils;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
