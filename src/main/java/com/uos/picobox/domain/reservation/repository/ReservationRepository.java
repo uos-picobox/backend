@@ -1,7 +1,7 @@
 package com.uos.picobox.domain.reservation.repository;
 
-import com.uos.picobox.global.enumClass.PaymentStatus;
 import com.uos.picobox.domain.reservation.entity.Reservation;
+import com.uos.picobox.global.enumClass.ReservationStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 import org.springframework.data.jpa.repository.Query;
@@ -22,20 +22,40 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
      */
     @Query("SELECT r FROM Reservation r " +
            "WHERE r.customer.id = :customerId " +
-           "AND r.paymentStatus = :status " +
+           "AND r.reservationStatus = :status " +
            "ORDER BY r.id DESC")
-    List<Reservation> findByCustomerIdAndPaymentStatusOrderByIdDesc(@Param("customerId") Long customerId,
-                                                                    @Param("status") PaymentStatus status);
+    List<Reservation> findByCustomerIdAndReservationStatusOrderByIdDesc(@Param("customerId") Long customerId,
+                                                                    @Param("status") ReservationStatus status);
 
     /**
      * 게스트의 예매 내역을 상영 정보와 함께 조회 (완료된 예매만)
      */
     @Query("SELECT r FROM Reservation r " +
            "WHERE r.guest.id = :guestId " +
-           "AND r.paymentStatus = :status " +
+           "AND r.reservationStatus = :status " +
            "ORDER BY r.id DESC")
-    List<Reservation> findByGuestIdAndPaymentStatusOrderByIdDesc(@Param("guestId") Long guestId,
-                                                                 @Param("status") PaymentStatus status);
+    List<Reservation> findByGuestIdAndReservationStatusOrderByIdDesc(@Param("guestId") Long guestId,
+                                                                 @Param("status") ReservationStatus status);
+
+    /**
+     * 고객의 예매 내역을 ReservationStatus로 조회
+     */
+    @Query("SELECT r FROM Reservation r " +
+           "WHERE r.customer.id = :customerId " +
+           "AND r.reservationStatus IN :statuses " +
+           "ORDER BY r.id DESC")
+    List<Reservation> findByCustomerIdAndReservationStatusInOrderByIdDesc(@Param("customerId") Long customerId,
+                                                                          @Param("statuses") List<ReservationStatus> statuses);
+
+    /**
+     * 게스트의 예매 내역을 ReservationStatus로 조회
+     */
+    @Query("SELECT r FROM Reservation r " +
+           "WHERE r.guest.id = :guestId " +
+           "AND r.reservationStatus IN :statuses " +
+           "ORDER BY r.id DESC")
+    List<Reservation> findByGuestIdAndReservationStatusInOrderByIdDesc(@Param("guestId") Long guestId,
+                                                                       @Param("statuses") List<ReservationStatus> statuses);
 
     /**
      * 예매 상세 조회 (상영 정보, 결제 정보 포함) - 회원용
@@ -64,7 +84,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
            "JOIN r.tickets t " +
            "JOIN Screening s ON r.screeningId = s.id " +
            "WHERE s.movie.id = :movieId " +
-           "AND r.paymentStatus = 'COMPLETED'")
+           "AND r.reservationStatus = 'COMPLETED'")
     Long countReservedAudienceByMovieId(@Param("movieId") Long movieId);
 
     /**
@@ -72,6 +92,6 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
      */
     @Query("SELECT COUNT(t) FROM Reservation r " +
            "JOIN r.tickets t " +
-           "WHERE r.paymentStatus = 'COMPLETED'")
+           "WHERE r.reservationStatus = 'COMPLETED'")
     Long countTotalReservedAudience();
 }

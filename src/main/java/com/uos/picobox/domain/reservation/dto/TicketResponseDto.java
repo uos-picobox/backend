@@ -48,10 +48,13 @@ public class TicketResponseDto {
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy.MM.dd HH:mm")
     private final LocalDateTime reservationDate;
 
+    @Schema(description = "예매 상태", example = "COMPLETED")
+    private final String reservationStatus;
+
     public TicketResponseDto(Long reservationId, String movieTitle, String posterUrl,
                            String movieRating, LocalDateTime screeningStartTime, LocalDateTime screeningEndTime,
                            String screeningRoom, String seats, Integer peopleCount, String reserverName,
-                           LocalDateTime reservationDate) {
+                           LocalDateTime reservationDate, String reservationStatus) {
         this.reservationId = reservationId;
         this.movieTitle = movieTitle;
         this.posterUrl = posterUrl;
@@ -63,5 +66,6 @@ public class TicketResponseDto {
         this.peopleCount = peopleCount;
         this.reserverName = reserverName;
         this.reservationDate = reservationDate;
+        this.reservationStatus = reservationStatus;
     }
 } 
