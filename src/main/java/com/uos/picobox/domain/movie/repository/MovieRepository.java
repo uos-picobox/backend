@@ -55,4 +55,22 @@ public interface MovieRepository extends JpaRepository<Movie, Long> {
             "LEFT JOIN FETCH mc.actor " +
             "WHERE m.id = :movieId")
     Optional<Movie> findMovieDetailsById(@Param("movieId") Long movieId);
+
+    /**
+     * 영화 제목으로 검색
+     */
+    @Query("SELECT DISTINCT m FROM Movie m " +
+            "LEFT JOIN FETCH m.movieRating " +
+            "WHERE LOWER(m.title) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+    List<Movie> findMoviesByTitleContaining(@Param("keyword") String keyword);
+
+    /**
+     * 배우 이름으로 영화 검색
+     */
+    @Query("SELECT DISTINCT m FROM Movie m " +
+            "LEFT JOIN FETCH m.movieRating " +
+            "JOIN m.movieCasts mc " +
+            "JOIN mc.actor a " +
+            "WHERE LOWER(a.name) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+    List<Movie> findMoviesByActorNameContaining(@Param("keyword") String keyword);
 }
