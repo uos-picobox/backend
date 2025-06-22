@@ -23,7 +23,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 //"회원가입, 로그인 아이디 중복 검사, 이메일 중복 검사, 이메일 인증 코드 전송, 이메일 인증 코드 인증"
-@Tag(name = "회원 - 00. 회원 가입", description = "회원가입 관련 API를 제공합니다.")
+@Tag(name = "00. 회원 - 회원 가입", description = "회원가입 관련 API를 제공합니다.")
 
 @RestController
 @RequestMapping("/api/signup/customer")
