@@ -19,6 +19,7 @@ import com.uos.picobox.user.repository.CustomerRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,7 +30,9 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.Base64;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -203,16 +206,28 @@ public class PaymentService {
         }
     }
 
-    /*
     public ConfirmPaymentResponseDto findPaymentHistoryByReservationId(Long reservationId) {
-
+        Payment payment = paymentRepository.findByReservationId(reservationId).orElseThrow(() ->
+                new EntityNotFoundException("해당 예매에 대한 결제 정보가 없습니다."));
+        if (payment.getPaymentDiscountId() != null) {
+            Optional<PaymentDiscount> option = paymentDiscountRepository.findById(payment.getPaymentDiscountId());
+            if (option.isPresent()) {
+                PaymentDiscount paymentDiscount = option.get();
+                return ConfirmPaymentResponseDto.builder()
+                        .payment(payment)
+                        .paymentDiscountInfo(new PaymentDiscountResponseDto(paymentDiscount))
+                        .build();
+            }
+            else {
+                return ConfirmPaymentResponseDto.builder()
+                        .payment(payment)
+                        .build();
+            }
+        }
+        else {
+            return ConfirmPaymentResponseDto.builder()
+                    .payment(payment)
+                    .build();
+        }
     }
-
-    public ConfirmPaymentResponseDto findPaymentHistoryByCustomerId(Long customerId) {
-
-    }
-
-    public ConfirmPaymentResponseDto findPaymentHistoryByGuestId(Long guestId) {
-
-    }*/
 }
