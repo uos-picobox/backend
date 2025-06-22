@@ -8,10 +8,7 @@ import com.uos.picobox.domain.point.entity.PointHistory;
 import com.uos.picobox.domain.point.repository.PointHistoryRepository;
 import com.uos.picobox.domain.price.entity.RoomTicketTypePrice;
 import com.uos.picobox.domain.price.repository.RoomTicketTypePriceRepository;
-import com.uos.picobox.domain.reservation.dto.PaymentRequestDto;
-import com.uos.picobox.domain.reservation.dto.ReservationRequestDto;
-import com.uos.picobox.domain.reservation.dto.ReservationResponseDto;
-import com.uos.picobox.domain.reservation.dto.SeatRequestDto;
+import com.uos.picobox.domain.reservation.dto.*;
 import com.uos.picobox.domain.reservation.entity.*;
 import com.uos.picobox.domain.payment.repository.PaymentRepository;
 import com.uos.picobox.domain.reservation.repository.ReservationRepository;
@@ -22,16 +19,21 @@ import com.uos.picobox.domain.screening.repository.ScreeningRepository;
 import com.uos.picobox.domain.screening.repository.ScreeningSeatRepository;
 import com.uos.picobox.global.enumClass.TicketStatus;
 import com.uos.picobox.user.entity.Customer;
+import com.uos.picobox.user.entity.Guest;
 import com.uos.picobox.user.repository.CustomerRepository;
+import com.uos.picobox.user.repository.GuestRepository;
+import com.uos.picobox.global.utils.SessionUtils;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -43,10 +45,12 @@ public class ReservationService {
     private final ReservationRepository reservationRepository;
     private final ScreeningSeatRepository screeningSeatRepository;
     private final CustomerRepository customerRepository;
+    private final GuestRepository guestRepository;
     private final RoomTicketTypePriceRepository roomTicketTypePriceRepository;
     private final ScreeningRepository screeningRepository;
     private final PointHistoryRepository pointHistoryRepository;
     private final PaymentRepository paymentRepository;
+    private final SessionUtils sessionUtils;
 
     private static final int SEAT_HOLD_MINUTES = 10;
 
@@ -55,27 +59,40 @@ public class ReservationService {
      * 선점된 좌석은 다른 사용자가 선택할 수 없으며, 지정된 시간(10분) 후 자동으로 해제됩니다.
      * 
      * @param dto 선점할 좌석 정보 (상영 ID, 좌석 ID 목록)
-     * @param customerId 좌석을 선점하는 고객 ID
+     * @param userInfo 사용자 인증 정보
      * @throws IllegalStateException 이미 선점되었거나 판매된 좌석인 경우
      * @throws EntityNotFoundException 존재하지 않는 좌석인 경우
      */
     @Transactional
-    public void holdSeats(SeatRequestDto dto, Long customerId) {
-        log.info("좌석 선점 요청: screeningId={}, seatIds={}, customerId={}", dto.getScreeningId(), dto.getSeatIds(), customerId);
+    public void holdSeats(SeatRequestDto dto, Map<String, Object> userInfo) {
+        String userType = (String) userInfo.get("type");
+        Long userId = (Long) userInfo.get("id");
+        
+        log.info("좌석 선점 요청: screeningId={}, seatIds={}, userType={}, userId={}", 
+                dto.getScreeningId(), dto.getSeatIds(), userType, userId);
+        
         for (Long seatId : dto.getSeatIds()) {
-            ScreeningSeat screeningSeat = screeningSeatRepository.findByIdWithPessimisticLock(dto.getScreeningId(), seatId)
-                    .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 좌석입니다. screeningId=" + dto.getScreeningId() + ", seatId=" + seatId));
-
+            ScreeningSeat.ScreeningSeatId id = new ScreeningSeat.ScreeningSeatId(dto.getScreeningId(), seatId);
+            ScreeningSeat screeningSeat = screeningSeatRepository.findById(id)
+                    .orElseThrow(() -> new EntityNotFoundException("좌석 정보를 찾을 수 없습니다: " + seatId));
+            
             if (screeningSeat.getSeatStatus() != SeatStatus.AVAILABLE) {
-                throw new IllegalStateException("이미 선택되었거나 예매가 불가능한 좌석입니다: seatId=" + seatId);
+                throw new IllegalStateException("이미 선택된 좌석입니다: " + seatId);
             }
-
-            // 좌석 선점 및 선점한 고객 ID 기록
+            
             screeningSeat.setSeatStatus(SeatStatus.HOLD);
             screeningSeat.setHoldExpiresAt(LocalDateTime.now().plusMinutes(SEAT_HOLD_MINUTES));
-            screeningSeat.setHoldCustomerId(customerId);
-            log.debug("좌석 선점 완료: screeningId={}, seatId={}, customerId={}", dto.getScreeningId(), seatId, customerId);
+            
+            if ("customer".equals(userType)) {
+                screeningSeat.setHoldCustomerId(userId);
+                screeningSeat.setHoldGuestId(null);
+            } else {
+                screeningSeat.setHoldGuestId(userId);
+                screeningSeat.setHoldCustomerId(null);
+            }
         }
+        
+        log.info("좌석 선점 완료: {} 개 좌석", dto.getSeatIds().size());
     }
 
     /**
@@ -83,28 +100,36 @@ public class ReservationService {
      * 선점한 본인만 해제할 수 있으며, 해제된 좌석은 다시 예매 가능 상태가 됩니다.
      * 
      * @param dto 해제할 좌석 정보 (상영 ID, 좌석 ID 목록)
-     * @param customerId 좌석을 해제하려는 고객 ID
+     * @param userInfo 사용자 인증 정보
      * @throws IllegalStateException 다른 고객이 선점한 좌석을 해제하려는 경우
      * @throws EntityNotFoundException 존재하지 않는 좌석인 경우
      */
     @Transactional
-    public void releaseSeats(SeatRequestDto dto, Long customerId) {
-        log.info("좌석 선점 해제 요청: screeningId={}, seatIds={}, customerId={}", dto.getScreeningId(), dto.getSeatIds(), customerId);
+    public void releaseSeats(SeatRequestDto dto, Map<String, Object> userInfo) {
+        String userType = (String) userInfo.get("type");
+        Long userId = (Long) userInfo.get("id");
+        
         for (Long seatId : dto.getSeatIds()) {
-            ScreeningSeat screeningSeat = screeningSeatRepository.findById(new ScreeningSeat.ScreeningSeatId(dto.getScreeningId(), seatId))
-                    .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 좌석입니다. screeningId=" + dto.getScreeningId() + ", seatId=" + seatId));
-
-            if (screeningSeat.getSeatStatus() == SeatStatus.HOLD) {
-                // 선점한 고객이 맞는지 확인
-                if (screeningSeat.getHoldCustomerId() != null && !screeningSeat.getHoldCustomerId().equals(customerId)) {
-                    throw new IllegalStateException("다른 고객이 선점한 좌석은 해제할 수 없습니다: seatId=" + seatId);
-                }
-                
-                screeningSeat.setSeatStatus(SeatStatus.AVAILABLE);
-                screeningSeat.setHoldExpiresAt(null);
-                screeningSeat.setHoldCustomerId(null);
-                log.debug("좌석 선점 해제 완료: screeningId={}, seatId={}, customerId={}", dto.getScreeningId(), seatId, customerId);
+            ScreeningSeat.ScreeningSeatId id = new ScreeningSeat.ScreeningSeatId(dto.getScreeningId(), seatId);
+            ScreeningSeat screeningSeat = screeningSeatRepository.findById(id)
+                    .orElseThrow(() -> new EntityNotFoundException("좌석 정보를 찾을 수 없습니다: " + seatId));
+            
+            // 본인이 선점한 좌석인지 확인
+            boolean isOwnSeat = false;
+            if ("customer".equals(userType)) {
+                isOwnSeat = userId.equals(screeningSeat.getHoldCustomerId());
+            } else {
+                isOwnSeat = userId.equals(screeningSeat.getHoldGuestId());
             }
+            
+            if (!isOwnSeat) {
+                throw new IllegalStateException("본인이 선점한 좌석이 아닙니다: " + seatId);
+            }
+            
+            screeningSeat.setSeatStatus(SeatStatus.AVAILABLE);
+            screeningSeat.setHoldExpiresAt(null);
+            screeningSeat.setHoldCustomerId(null);
+            screeningSeat.setHoldGuestId(null);
         }
     }
 
@@ -114,15 +139,15 @@ public class ReservationService {
      * 실제 결제는 별도의 completeReservation 메소드를 통해 완료됩니다.
      * 
      * @param dto 예매 정보 (상영 ID, 티켓 정보, 사용 포인트)
-     * @param customerId 예매하는 고객 ID
+     * @param userInfo 사용자 인증 정보
      * @return 생성된 예매 정보
      * @throws IllegalStateException 선점되지 않은 좌석을 예매하려는 경우
      * @throws EntityNotFoundException 고객, 상영, 가격 정보를 찾을 수 없는 경우
      */
     @Transactional
-    public ReservationResponseDto createPendingReservation(ReservationRequestDto dto, Long customerId) {
-        Customer customer = customerRepository.findById(customerId)
-                .orElseThrow(() -> new EntityNotFoundException("고객 정보를 찾을 수 없습니다: " + customerId));
+    public ReservationResponseDto createPendingReservation(ReservationRequestDto dto, Map<String, Object> userInfo) {
+        String userType = (String) userInfo.get("type");
+        Long userId = (Long) userInfo.get("id");
 
         Screening screening = screeningRepository.findByIdWithDetails(dto.getScreeningId())
                 .orElseThrow(() -> new EntityNotFoundException("상영 정보를 찾을 수 없습니다: " + dto.getScreeningId()));
@@ -136,12 +161,25 @@ public class ReservationService {
             throw new IllegalArgumentException("선택한 인원수(" + totalPersonCount + "명)와 좌석 수(" + dto.getSeatIds().size() + "개)가 일치하지 않습니다.");
         }
 
-        // 모든 좌석이 선점되어 있는지 확인
+        // 모든 좌석이 해당 사용자가 선점한 좌석인지 확인
         for (Long seatId : dto.getSeatIds()) {
             ScreeningSeat screeningSeat = screeningSeatRepository.findById(new ScreeningSeat.ScreeningSeatId(dto.getScreeningId(), seatId))
                     .orElseThrow(() -> new EntityNotFoundException("좌석 정보를 찾을 수 없습니다: " + seatId));
+            
             if (screeningSeat.getSeatStatus() != SeatStatus.HOLD) {
                 throw new IllegalStateException("선점되지 않은 좌석을 예매할 수 없습니다: " + seatId);
+            }
+            
+            // 본인이 선점한 좌석인지 확인
+            boolean isOwnSeat = false;
+            if ("customer".equals(userType)) {
+                isOwnSeat = userId.equals(screeningSeat.getHoldCustomerId());
+            } else {
+                isOwnSeat = userId.equals(screeningSeat.getHoldGuestId());
+            }
+            
+            if (!isOwnSeat) {
+                throw new IllegalStateException("본인이 선점한 좌석이 아닙니다: " + seatId);
             }
         }
 
@@ -154,15 +192,37 @@ public class ReservationService {
             totalAmount += priceInfo.getPrice() * ticketTypeInfo.getCount();
         }
 
-        customer.usePoints(dto.getUsedPoints());
+        // 포인트 사용 (회원만 가능)
+        Customer customer = null;
+        if ("customer".equals(userType)) {
+            customer = customerRepository.findById(userId)
+                    .orElseThrow(() -> new EntityNotFoundException("고객 정보를 찾을 수 없습니다: " + userId));
+            customer.usePoints(dto.getUsedPoints());
+        } else if (dto.getUsedPoints() > 0) {
+            throw new IllegalArgumentException("게스트는 포인트를 사용할 수 없습니다.");
+        }
+        
         int finalAmount = totalAmount - dto.getUsedPoints();
 
-        Reservation reservation = Reservation.builder()
-                .customer(customer)
-                .screeningId(dto.getScreeningId())
-                .totalAmount(totalAmount)
-                .paymentStatus(PaymentStatus.PENDING)
-                .build();
+        // 예매 생성 (회원/게스트 구분)
+        Reservation reservation;
+        if ("customer".equals(userType)) {
+            reservation = Reservation.builder()
+                    .customer(customer)
+                    .screeningId(dto.getScreeningId())
+                    .totalAmount(totalAmount)
+                    .paymentStatus(PaymentStatus.PENDING)
+                    .build();
+        } else {
+            Guest guest = guestRepository.findById(userId)
+                    .orElseThrow(() -> new EntityNotFoundException("게스트 정보를 찾을 수 없습니다: " + userId));
+            reservation = Reservation.builder()
+                    .guest(guest)
+                    .screeningId(dto.getScreeningId())
+                    .totalAmount(totalAmount)
+                    .paymentStatus(PaymentStatus.PENDING)
+                    .build();
+        }
 
         // 티켓 생성 로직 - 좌석을 티켓 유형별로 순서대로 배정
         List<String> seatNumbers = new ArrayList<>();
@@ -193,7 +253,7 @@ public class ReservationService {
             }
         }
 
-        if (dto.getUsedPoints() > 0) {
+        if (dto.getUsedPoints() > 0 && "customer".equals(userType)) {
             PointHistory pointHistory = PointHistory.builder()
                     .customer(customer)
                     .changeType(PointChangeType.USED)
@@ -215,20 +275,32 @@ public class ReservationService {
      * 결제 정보를 저장하고 포인트 적립을 처리합니다.
      * 
      * @param dto 결제 정보 (예매 ID, 주문 ID, 결제 키, 결제 방법 등)
-     * @param customerId 결제하는 고객 ID
+     * @param userInfo 사용자 인증 정보
      * @throws IllegalArgumentException 예약자 정보가 일치하지 않는 경우
      * @throws IllegalStateException 이미 처리되었거나 취소된 예약인 경우
      * @throws EntityNotFoundException 예약 정보를 찾을 수 없는 경우
      */
     @Transactional
-    public void completeReservation(PaymentRequestDto dto, Long customerId) {
+    public void completeReservation(PaymentRequestDto dto, Map<String, Object> userInfo) {
+        String userType = (String) userInfo.get("type");
+        Long userId = (Long) userInfo.get("id");
+        
         log.info("결제 완료 처리 시작: reservationId={}", dto.getReservationId());
         Reservation reservation = reservationRepository.findById(dto.getReservationId())
                 .orElseThrow(() -> new EntityNotFoundException("예약 정보를 찾을 수 없습니다: " + dto.getReservationId()));
 
-        if (!reservation.getCustomer().getId().equals(customerId)) {
+        // 예약자 정보 확인 (회원/게스트 구분)
+        boolean isOwner = false;
+        if ("customer".equals(userType)) {
+            isOwner = reservation.getCustomer() != null && reservation.getCustomer().getId().equals(userId);
+        } else {
+            isOwner = reservation.getGuest() != null && reservation.getGuest().getId().equals(userId);
+        }
+        
+        if (!isOwner) {
             throw new IllegalArgumentException("예약자 정보가 일치하지 않습니다.");
         }
+        
         if (reservation.getPaymentStatus() != PaymentStatus.PENDING) {
             throw new IllegalStateException("이미 처리되었거나 취소된 예약입니다.");
         }
@@ -248,18 +320,20 @@ public class ReservationService {
         int usedPoints = dto.getUsedPointAmount() != null ? dto.getUsedPointAmount() : 0;
         int finalAmount = reservation.getTotalAmount() - usedPoints;
 
-        // 포인트 적립 (결제 금액의 10%)
-        int earnedPoints = (int) (finalAmount * 0.1);
-        if (earnedPoints > 0) {
-            Customer customer = reservation.getCustomer();
-            customer.addPoints(earnedPoints);
-            PointHistory pointHistory = PointHistory.builder()
-                    .customer(customer)
-                    .changeType(PointChangeType.EARNED)
-                    .amount(earnedPoints)
-                    .relatedReservationId(reservation.getId())
-                    .build();
-            pointHistoryRepository.save(pointHistory);
+        // 포인트 적립 (회원만, 결제 금액의 10%)
+        if ("customer".equals(userType)) {
+            int earnedPoints = (int) (finalAmount * 0.1);
+            if (earnedPoints > 0) {
+                Customer customer = reservation.getCustomer();
+                customer.addPoints(earnedPoints);
+                PointHistory pointHistory = PointHistory.builder()
+                        .customer(customer)
+                        .changeType(PointChangeType.EARNED)
+                        .amount(earnedPoints)
+                        .relatedReservationId(reservation.getId())
+                        .build();
+                pointHistoryRepository.save(pointHistory);
+            }
         }
 
         // 결제 정보 생성
@@ -303,11 +377,14 @@ public class ReservationService {
 
     /**
      * 고객의 예매 내역을 조회합니다.
-     * @param customerId 고객 ID
+     * @param userInfo 사용자 인증 정보
      * @return 예매 내역 목록
      */
-    public List<ReservationResponseDto> getReservationsByCustomerId(Long customerId) {
-        List<Reservation> reservations = reservationRepository.findByCustomerIdOrderByReservationDateDesc(customerId);
+    public List<ReservationResponseDto> getReservationsByCustomerId(Map<String, Object> userInfo) {
+        String userType = (String) userInfo.get("type");
+        Long userId = (Long) userInfo.get("id");
+        
+        List<Reservation> reservations = reservationRepository.findByCustomerIdOrderByReservationDateDesc(userId);
         return reservations.stream()
                 .map(reservation -> {
                     Screening screening = screeningRepository.findById(reservation.getScreeningId())
@@ -330,5 +407,179 @@ public class ReservationService {
                     return new ReservationResponseDto(reservation, usedPoints, finalAmount, movieTitle, seatNumbers);
                 })
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * 사용자의 예매 내역을 조회합니다. (과거/현재 구분, 회원/게스트 지원)
+     */
+    public List<ReservationListResponseDto> getReservationList(Map<String, Object> userInfo) {
+        String userType = (String) userInfo.get("type");
+        Long userId = (Long) userInfo.get("id");
+        
+        // 완료된 예매만 조회 (회원/게스트 구분)
+        List<Reservation> reservations;
+        if ("customer".equals(userType)) {
+            reservations = reservationRepository.findByCustomerIdAndPaymentStatusOrderByIdDesc(
+                userId, PaymentStatus.COMPLETED);
+        } else {
+            reservations = reservationRepository.findByGuestIdAndPaymentStatusOrderByIdDesc(
+                userId, PaymentStatus.COMPLETED);
+        }
+        
+        LocalDateTime now = LocalDateTime.now();
+        
+        return reservations.stream()
+                .map(reservation -> {
+                    Screening screening = screeningRepository.findByIdWithDetails(reservation.getScreeningId())
+                            .orElseThrow(() -> new EntityNotFoundException("상영 정보를 찾을 수 없습니다."));
+                    
+                    // 좌석 번호 목록 생성
+                    List<String> seatNumbers = reservation.getTickets().stream()
+                            .map(ticket -> {
+                                ScreeningSeat screeningSeat = screeningSeatRepository.findById(
+                                    new ScreeningSeat.ScreeningSeatId(ticket.getScreeningId(), ticket.getSeatId())
+                                ).orElse(null);
+                                return screeningSeat != null ? screeningSeat.getSeat().getSeatNumber() : "정보없음";
+                            })
+                            .collect(Collectors.toList());
+                    
+                    // 최종 금액 계산
+                    int usedPoints = reservation.getPayment() != null ? reservation.getPayment().getUsedPointAmount() : 0;
+                    int finalAmount = reservation.getTotalAmount() - usedPoints;
+                    
+                    // 상영 완료 여부 확인 (상영 종료 시간 기준)
+                    LocalDateTime screeningEndTime = screening.getScreeningTime().plusMinutes(screening.getMovie().getDuration());
+                    boolean isScreeningCompleted = now.isAfter(screeningEndTime);
+                    
+                    return new ReservationListResponseDto(
+                        reservation.getId(),
+                        screening.getMovie().getTitle(),
+                        screening.getMovie().getPosterUrl(),
+                        screening.getScreeningTime(),
+                        screening.getScreeningRoom().getRoomName(),
+                        seatNumbers,
+                        reservation.getReservationDate(),
+                        reservation.getPaymentStatus().name(),
+                        finalAmount,
+                        isScreeningCompleted
+                    );
+                })
+                .sorted((a, b) -> b.getScreeningTime().compareTo(a.getScreeningTime())) // 상영일 기준 최신순
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 예매 상세 정보를 조회합니다.
+     */
+    public ReservationDetailResponseDto getReservationDetail(Long reservationId, Map<String, Object> userInfo) {
+        String userType = (String) userInfo.get("type");
+        Long userId = (Long) userInfo.get("id");
+        
+        // 회원/게스트 구분하여 조회
+        Reservation reservation;
+        if ("customer".equals(userType)) {
+            reservation = reservationRepository.findByIdAndCustomerIdWithDetails(reservationId, userId)
+                    .orElseThrow(() -> new EntityNotFoundException("예매 정보를 찾을 수 없습니다."));
+        } else {
+            reservation = reservationRepository.findByIdAndGuestIdWithDetails(reservationId, userId)
+                    .orElseThrow(() -> new EntityNotFoundException("예매 정보를 찾을 수 없습니다."));
+        }
+        
+        Screening screening = screeningRepository.findByIdWithDetails(reservation.getScreeningId())
+                .orElseThrow(() -> new EntityNotFoundException("상영 정보를 찾을 수 없습니다."));
+        
+        // 좌석 번호 목록 생성
+        List<String> seatNumbers = reservation.getTickets().stream()
+                .map(ticket -> {
+                    ScreeningSeat screeningSeat = screeningSeatRepository.findById(
+                        new ScreeningSeat.ScreeningSeatId(ticket.getScreeningId(), ticket.getSeatId())
+                    ).orElse(null);
+                    return screeningSeat != null ? screeningSeat.getSeat().getSeatNumber() : "정보없음";
+                })
+                .collect(Collectors.toList());
+        
+        // 상영 종료 시간 계산
+        LocalDateTime screeningEndTime = screening.getScreeningTime().plusMinutes(screening.getMovie().getDuration());
+        
+        // 결제 정보
+        Payment payment = reservation.getPayment();
+        int usedPoints = payment != null ? payment.getUsedPointAmount() : 0;
+        int finalAmount = reservation.getTotalAmount() - usedPoints;
+        String paymentMethod = payment != null ? payment.getPaymentMethod() : "정보없음";
+        LocalDateTime paymentCompletedAt = payment != null ? payment.getApprovedAt() : null;
+        
+        return new ReservationDetailResponseDto(
+            reservation.getId(),
+            reservation.getReservationDate(),
+            reservation.getPaymentStatus().name(),
+            screening.getMovie().getTitle(),
+            screening.getMovie().getPosterUrl(),
+            screening.getMovie().getMovieRating().getRatingName(),
+            screening.getScreeningTime(),
+            screeningEndTime,
+            screening.getScreeningRoom().getRoomName(),
+            seatNumbers,
+            reservation.getTotalAmount(),
+            usedPoints,
+            finalAmount,
+            paymentMethod,
+            paymentCompletedAt
+        );
+    }
+
+    /**
+     * 모바일 티켓 정보를 조회합니다.
+     */
+    public TicketResponseDto getTicket(Long reservationId, Map<String, Object> userInfo) {
+        String userType = (String) userInfo.get("type");
+        Long userId = (Long) userInfo.get("id");
+        
+        // 회원/게스트 구분하여 조회
+        Reservation reservation;
+        if ("customer".equals(userType)) {
+            reservation = reservationRepository.findByIdAndCustomerIdWithDetails(reservationId, userId)
+                    .orElseThrow(() -> new EntityNotFoundException("예매 정보를 찾을 수 없습니다."));
+        } else {
+            reservation = reservationRepository.findByIdAndGuestIdWithDetails(reservationId, userId)
+                    .orElseThrow(() -> new EntityNotFoundException("예매 정보를 찾을 수 없습니다."));
+        }
+        
+        Screening screening = screeningRepository.findByIdWithDetails(reservation.getScreeningId())
+                .orElseThrow(() -> new EntityNotFoundException("상영 정보를 찾을 수 없습니다."));
+        
+        // 좌석 번호들을 문자열로 합치기
+        String seats = reservation.getTickets().stream()
+                .map(ticket -> {
+                    ScreeningSeat screeningSeat = screeningSeatRepository.findById(
+                        new ScreeningSeat.ScreeningSeatId(ticket.getScreeningId(), ticket.getSeatId())
+                    ).orElse(null);
+                    return screeningSeat != null ? screeningSeat.getSeat().getSeatNumber() : "정보없음";
+                })
+                .collect(Collectors.joining(", "));
+        
+        // 상영 종료 시간 계산
+        LocalDateTime screeningEndTime = screening.getScreeningTime().plusMinutes(screening.getMovie().getDuration());
+        
+        // 예매자 이름 (회원/게스트 구분)
+        String reserverName;
+        if (reservation.getCustomer() != null) {
+            reserverName = reservation.getCustomer().getName();
+        } else {
+            reserverName = reservation.getGuest().getName();
+        }
+        
+        return new TicketResponseDto(
+            reservation.getId(),
+            screening.getMovie().getTitle(),
+            screening.getMovie().getPosterUrl(),
+            screening.getMovie().getMovieRating().getRatingName(),
+            screening.getScreeningTime(),
+            screeningEndTime,
+            screening.getScreeningRoom().getRoomName(),
+            seats,
+            reservation.getTickets().size(),
+            reserverName,
+            reservation.getReservationDate()
+        );
     }
 }
