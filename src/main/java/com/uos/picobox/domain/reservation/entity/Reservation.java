@@ -2,8 +2,7 @@ package com.uos.picobox.domain.reservation.entity;
 
 import com.uos.picobox.domain.payment.entity.Payment;
 import com.uos.picobox.domain.ticket.entity.Ticket;
-import com.uos.picobox.global.converter.PaymentStatusConverter;
-import com.uos.picobox.global.enumClass.PaymentStatus;
+import com.uos.picobox.global.enumClass.ReservationStatus;
 import com.uos.picobox.user.entity.Customer;
 import com.uos.picobox.user.entity.Guest;
 import jakarta.persistence.*;
@@ -43,9 +42,9 @@ public class Reservation {
     @Column(name = "TOTAL_AMOUNT", nullable = false)
     private Integer totalAmount;
 
-    @Column(name = "PAYMENT_STATUS", nullable = false, length = 15)
-    @Convert(converter = PaymentStatusConverter.class)
-    private PaymentStatus paymentStatus;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "RESERVATION_STATUS", nullable = false, length = 15)
+    private ReservationStatus reservationStatus;
 
     @OneToMany(mappedBy = "reservation", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Ticket> tickets = new ArrayList<>();
@@ -54,12 +53,13 @@ public class Reservation {
     private Payment payment;
 
     @Builder
-    public Reservation(Customer customer, Guest guest, Long screeningId, Integer totalAmount, PaymentStatus paymentStatus) {
+    public Reservation(Customer customer, Guest guest, Long screeningId, Integer totalAmount, 
+                      ReservationStatus reservationStatus) {
         this.customer = customer;
         this.guest = guest;
         this.screeningId = screeningId;
         this.totalAmount = totalAmount;
-        this.paymentStatus = paymentStatus;
+        this.reservationStatus = reservationStatus != null ? reservationStatus : ReservationStatus.PENDING;
         this.reservationDate = LocalDateTime.now();
     }
 
@@ -77,7 +77,7 @@ public class Reservation {
         }
     }
 
-    public void updatePaymentStatus(PaymentStatus paymentStatus) {
-        this.paymentStatus = paymentStatus;
+    public void updateReservationStatus(ReservationStatus reservationStatus) {
+        this.reservationStatus = reservationStatus;
     }
 }
