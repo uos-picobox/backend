@@ -8,6 +8,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
@@ -75,7 +76,7 @@ public class SessionUtils {
         );
     }
 
-    public Long findIdByAuthentication(Authentication authentication) {
+    public Map<String, Object> findSessionInfoByAuthentication(Authentication authentication) {
         String value = (String) authentication.getPrincipal();
         Map<String, String> sessionInfo = splitSessionValue(value);
         String type = sessionInfo.get("type");
@@ -91,7 +92,10 @@ public class SessionUtils {
         else {
             throw new IllegalArgumentException("잘못된 session 정보입니다.");
         }
-        return id;
+        return Map.of(
+                "type", type,
+                "id", id
+        );
     }
 
     public Long findCustomerIdByAuthentication(Authentication authentication) {
