@@ -11,8 +11,8 @@ import java.time.LocalDate;
 @Getter
 public class MovieListItemDto {
 
-    @Schema(description = "정렬 순서에 따른 순번", example = "1")
-    private int rank;
+    @Schema(description = "예매율 순위 (상영 예정 영화는 null)", example = "1")
+    private Integer rank;
 
     @Schema(description = "영화 ID", example = "1")
     private Long movieId;
@@ -33,9 +33,16 @@ public class MovieListItemDto {
     @Schema(description = "상영 시간 (분 단위)", example = "141")
     private Integer duration;
 
+    @Schema(description = "예매율 (백분율)", example = "25.50")
+    private Double reservationRate;
+
+    @Schema(description = "리뷰 평점 (소수점 둘째자리, 리뷰 없으면 null)", example = "4.25")
+    private Double reviewRating;
+
     @Builder
-    public MovieListItemDto(int rank, Long movieId, String title, String posterUrl,
-                            LocalDate releaseDate, String movieRatingName, Integer duration) {
+    public MovieListItemDto(Integer rank, Long movieId, String title, String posterUrl,
+                            LocalDate releaseDate, String movieRatingName, Integer duration,
+                            Double reservationRate, Double reviewRating) {
         this.rank = rank;
         this.movieId = movieId;
         this.title = title;
@@ -43,9 +50,11 @@ public class MovieListItemDto {
         this.releaseDate = releaseDate;
         this.movieRatingName = movieRatingName;
         this.duration = duration;
+        this.reservationRate = reservationRate;
+        this.reviewRating = reviewRating;
     }
 
-    public static MovieListItemDto fromEntity(Movie movie, int rank) {
+    public static MovieListItemDto fromEntity(Movie movie, Integer rank, Double reservationRate, Double reviewRating) {
         return MovieListItemDto.builder()
                 .rank(rank)
                 .movieId(movie.getId())
@@ -54,6 +63,8 @@ public class MovieListItemDto {
                 .releaseDate(movie.getReleaseDate())
                 .movieRatingName(movie.getMovieRating() != null ? movie.getMovieRating().getRatingName() : null)
                 .duration(movie.getDuration())
+                .reservationRate(reservationRate)
+                .reviewRating(reviewRating)
                 .build();
     }
 }

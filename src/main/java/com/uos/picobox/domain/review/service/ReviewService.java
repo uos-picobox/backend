@@ -3,8 +3,7 @@ package com.uos.picobox.domain.review.service;
 import com.uos.picobox.domain.movie.entity.Movie;
 import com.uos.picobox.domain.movie.repository.MovieRepository;
 import com.uos.picobox.domain.reservation.entity.Reservation;
-import com.uos.picobox.domain.reservation.entity.Ticket;
-import com.uos.picobox.domain.reservation.entity.TicketStatus;
+import com.uos.picobox.global.enumClass.TicketStatus;
 import com.uos.picobox.domain.reservation.repository.ReservationRepository;
 import com.uos.picobox.domain.screening.entity.Screening;
 import com.uos.picobox.domain.screening.repository.ScreeningRepository;
@@ -23,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -223,7 +223,79 @@ public class ReviewService {
         if (rating == null || rating < 0.5 || rating > 5.0) {
             return false;
         }
-        // 0.5 단위인지 확인
-        return (rating * 10) % 5 == 0;
+        // 0.5 단위 체크 (예: 1.0, 1.5, 2.0, 2.5, ...)
+        return (rating * 2) % 1 == 0;
+    }
+
+    // ===== 관리자용 메서드들 =====
+
+    /**
+     * 관리자용 전체 리뷰 목록 조회
+     */
+    public Page<ReviewResponseDto> getAllReviewsForAdmin(int page, int size, String sort) {
+        Pageable pageable;
+        
+        if ("oldest".equals(sort)) {
+            pageable = PageRequest.of(page, size, Sort.by("createdAt").ascending());
+        } else {
+            // 기본값: latest (최신순)
+            pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        }
+        
+        Page<Review> reviews = reviewRepository.findAll(pageable);
+        return reviews.map(review -> new ReviewResponseDto(review, false));
+    }
+
+    /**
+     * 관리자용 특정 영화 리뷰 목록 조회
+     */
+    public Page<ReviewResponseDto> getReviewsByMovieForAdmin(Long movieId, int page, int size, String sort) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Review> reviews;
+        
+        if ("like".equals(sort)) {
+            reviews = reviewRepository.findByMovieIdOrderByLikeCountDesc(movieId, pageable);
+        } else {
+            // 기본값: latest (최신순)
+            reviews = reviewRepository.findByMovieIdOrderByCreatedAtDesc(movieId, pageable);
+        }
+        
+        return reviews.map(review -> new ReviewResponseDto(review, false));
+    }
+
+    /**
+     * 관리자용 리뷰 상세 조회
+     */
+    public ReviewResponseDto getReviewDetailForAdmin(Long reviewId) {
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new EntityNotFoundException("리뷰를 찾을 수 없습니다: " + reviewId));
+        
+        return new ReviewResponseDto(review, false);
+    }
+
+    /**
+     * 관리자용 리뷰 삭제 (작성자 확인 없이)
+     */
+    @Transactional
+    public void deleteReviewByAdmin(Long reviewId) {
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new EntityNotFoundException("리뷰를 찾을 수 없습니다: " + reviewId));
+        
+        reviewRepository.delete(review);
+        log.info("관리자에 의한 리뷰 삭제 완료: reviewId={}, 작성자={}", reviewId, review.getCustomer().getName());
+    }
+
+    /**
+     * 관리자용 특정 고객 리뷰 목록 조회
+     */
+    public Page<ReviewResponseDto> getReviewsByCustomerForAdmin(Long customerId, int page, int size) {
+        // 고객 존재 여부 확인
+        customerRepository.findById(customerId)
+                .orElseThrow(() -> new EntityNotFoundException("고객 정보를 찾을 수 없습니다: " + customerId));
+        
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Review> reviews = reviewRepository.findByCustomerIdOrderByCreatedAtDesc(customerId, pageable);
+        
+        return reviews.map(review -> new ReviewResponseDto(review, false));
     }
 } 

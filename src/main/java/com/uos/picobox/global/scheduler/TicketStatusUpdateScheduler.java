@@ -1,8 +1,8 @@
 package com.uos.picobox.global.scheduler;
 
-import com.uos.picobox.domain.reservation.entity.Ticket;
-import com.uos.picobox.domain.reservation.entity.TicketStatus;
-import com.uos.picobox.domain.reservation.repository.TicketRepository;
+import com.uos.picobox.domain.ticket.entity.Ticket;
+import com.uos.picobox.global.enumClass.TicketStatus;
+import com.uos.picobox.domain.ticket.repository.TicketRepository;
 import com.uos.picobox.domain.screening.entity.Screening;
 import com.uos.picobox.domain.screening.repository.ScreeningRepository;
 import lombok.RequiredArgsConstructor;
