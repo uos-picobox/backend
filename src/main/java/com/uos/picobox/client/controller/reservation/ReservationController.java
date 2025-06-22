@@ -87,9 +87,9 @@ public class ReservationController {
             @ApiResponse(responseCode = "404", description = "존재하지 않는 예약"),
             @ApiResponse(responseCode = "409", description = "이미 처리된 예약")
     })
-    @PostMapping("/complete")
+    @PostMapping("/complete/{reservationId}")
     public ResponseEntity<Void> completeReservation(
-            @RequestParam
+            @PathVariable
             @NotNull(message = "예약 ID는 필수입니다.")
             @Schema(description = "결제를 완료할 예약 ID", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
             Long reservationId,
