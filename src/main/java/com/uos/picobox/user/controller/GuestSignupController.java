@@ -18,7 +18,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-@Tag(name = "비회원 - 00. 비회원 등록", description = "비회원 등록 관련 API를 제공합니다.")
+@Tag(name = "01. 비회원 - 비회원 등록", description = "비회원 등록 관련 API를 제공합니다.")
 @RestController
 @RequestMapping("/api/signup/guest")
 @RequiredArgsConstructor
