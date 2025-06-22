@@ -1,5 +1,8 @@
 package com.uos.picobox.domain.reservation.service;
 
+import com.uos.picobox.domain.payment.entity.Payment;
+import com.uos.picobox.domain.ticket.entity.Ticket;
+import com.uos.picobox.global.enumClass.PaymentStatus;
 import com.uos.picobox.global.enumClass.PointChangeType;
 import com.uos.picobox.domain.point.entity.PointHistory;
 import com.uos.picobox.domain.point.repository.PointHistoryRepository;
@@ -10,13 +13,14 @@ import com.uos.picobox.domain.reservation.dto.ReservationRequestDto;
 import com.uos.picobox.domain.reservation.dto.ReservationResponseDto;
 import com.uos.picobox.domain.reservation.dto.SeatRequestDto;
 import com.uos.picobox.domain.reservation.entity.*;
-import com.uos.picobox.domain.reservation.repository.PaymentRepository;
+import com.uos.picobox.domain.payment.repository.PaymentRepository;
 import com.uos.picobox.domain.reservation.repository.ReservationRepository;
 import com.uos.picobox.domain.screening.entity.Screening;
 import com.uos.picobox.domain.screening.entity.ScreeningSeat;
 import com.uos.picobox.domain.screening.entity.SeatStatus;
 import com.uos.picobox.domain.screening.repository.ScreeningRepository;
 import com.uos.picobox.domain.screening.repository.ScreeningSeatRepository;
+import com.uos.picobox.global.enumClass.TicketStatus;
 import com.uos.picobox.user.entity.Customer;
 import com.uos.picobox.user.repository.CustomerRepository;
 import jakarta.persistence.EntityNotFoundException;

@@ -1,5 +1,10 @@
-package com.uos.picobox.domain.reservation.entity;
+package com.uos.picobox.domain.payment.entity;
 
+import com.uos.picobox.domain.reservation.entity.Reservation;
+import com.uos.picobox.global.converter.PaymentMethodConverter;
+import com.uos.picobox.global.converter.PaymentStatusConverter;
+import com.uos.picobox.global.enumClass.PaymentMethod;
+import com.uos.picobox.global.enumClass.PaymentStatus;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -31,10 +36,12 @@ public class Payment {
     private String paymentKey;
 
     @Column(name = "PAYMENT_METHOD", nullable = false, length = 30)
-    private String paymentMethod;
+    @Convert(converter = PaymentMethodConverter.class)
+    private PaymentMethod paymentMethod;
 
     @Column(name = "PAYMENT_STATUS", nullable = false, length = 30)
-    private String paymentStatus;
+    @Convert(converter = PaymentStatusConverter.class)
+    private PaymentStatus paymentStatus;
 
     @Column(name = "CURRENCY", nullable = false, length = 10)
     private String currency = "KRW";
@@ -60,7 +67,7 @@ public class Payment {
 
     @Builder
     public Payment(Reservation reservation, String orderId, String paymentKey, 
-                   String paymentMethod, String paymentStatus, String currency,
+                   PaymentMethod paymentMethod, PaymentStatus paymentStatus, String currency,
                    Long paymentDiscountId, Integer usedPointAmount, Integer amount, 
                    Integer finalAmount, LocalDateTime approvedAt) {
         this.reservation = reservation;
@@ -80,12 +87,12 @@ public class Payment {
         this.reservation = reservation;
     }
 
-    public void updateStatus(String paymentStatus) {
+    public void updateStatus(PaymentStatus paymentStatus) {
         this.paymentStatus = paymentStatus;
     }
 
     public void approve() {
-        this.paymentStatus = "DONE";
+        this.paymentStatus = PaymentStatus.DONE;
         this.approvedAt = LocalDateTime.now();
     }
 }

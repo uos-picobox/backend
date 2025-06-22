@@ -1,5 +1,9 @@
 package com.uos.picobox.domain.reservation.entity;
 
+import com.uos.picobox.domain.payment.entity.Payment;
+import com.uos.picobox.domain.ticket.entity.Ticket;
+import com.uos.picobox.global.converter.PaymentStatusConverter;
+import com.uos.picobox.global.enumClass.PaymentStatus;
 import com.uos.picobox.user.entity.Customer;
 import com.uos.picobox.user.entity.Guest;
 import jakarta.persistence.*;
@@ -40,7 +44,7 @@ public class Reservation {
     private Integer totalAmount;
 
     @Column(name = "PAYMENT_STATUS", nullable = false, length = 15)
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = PaymentStatusConverter.class)
     private PaymentStatus paymentStatus;
 
     @OneToMany(mappedBy = "reservation", cascade = CascadeType.ALL, orphanRemoval = true)

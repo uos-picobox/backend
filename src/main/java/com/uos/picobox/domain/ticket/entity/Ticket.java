@@ -1,5 +1,8 @@
-package com.uos.picobox.domain.reservation.entity;
+package com.uos.picobox.domain.ticket.entity;
 
+import com.uos.picobox.domain.reservation.entity.Reservation;
+import com.uos.picobox.global.converter.TicketStatusConverter;
+import com.uos.picobox.global.enumClass.TicketStatus;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -34,7 +37,7 @@ public class Ticket {
     private Integer price;
 
     @Column(name = "TICKET_STATUS", nullable = false, length = 15)
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = TicketStatusConverter.class)
     private TicketStatus ticketStatus;
 
     @Builder
