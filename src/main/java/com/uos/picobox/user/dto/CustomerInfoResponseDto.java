@@ -1,15 +1,15 @@
 package com.uos.picobox.user.dto;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-
 import com.uos.picobox.global.enumClass.Gender;
 import com.uos.picobox.user.entity.Customer;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
 @Getter
-public class SignupResponseDto {
+public class CustomerInfoResponseDto {
     @Schema(description = "고객 고유 ID", example = "1")
     private Long customerId;
 
@@ -43,7 +43,7 @@ public class SignupResponseDto {
     @Schema(description = "활성 상태", example = "true")
     private Boolean isActive;
 
-    public SignupResponseDto(Customer customer) {
+    public CustomerInfoResponseDto(Customer customer) {
         this.customerId = customer.getId();
         this.loginId = customer.getLoginId();
         this.name = customer.getName();
