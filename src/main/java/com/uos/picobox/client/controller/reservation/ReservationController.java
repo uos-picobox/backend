@@ -5,11 +5,13 @@ import com.uos.picobox.domain.reservation.service.ReservationService;
 import com.uos.picobox.global.utils.SessionUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -87,11 +89,14 @@ public class ReservationController {
     })
     @PostMapping("/complete")
     public ResponseEntity<Void> completeReservation(
-            @Valid @RequestBody PaymentRequestDto dto,
+            @RequestParam
+            @NotNull(message = "예약 ID는 필수입니다.")
+            @Schema(description = "결제를 완료할 예약 ID", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
+            Long reservationId,
             @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId,
             Authentication authentication) {
         Map<String, Object> sessionInfo = sessionUtils.findSessionInfoByAuthentication(authentication);
-        reservationService.completeReservation(dto, sessionInfo);
+        reservationService.completeReservation(reservationId, sessionInfo);
         return ResponseEntity.ok().build();
     }
 

@@ -1,9 +1,11 @@
 package com.uos.picobox.domain.payment.dto;
 
+import com.uos.picobox.domain.payment.entity.Payment;
 import com.uos.picobox.global.enumClass.PaymentMethod;
 import com.uos.picobox.global.enumClass.PaymentStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -43,8 +45,8 @@ public class BeforePaymentResponseDto {
     )
     private PaymentStatus paymentStatus;
 
-    @Schema(description = "할인 정책 ID (없을 수 있음)", example = "3")
-    private Long paymentDiscountId;
+    @Schema(description = "할인 정책 (없을 수 있음)", example = "3")
+    private PaymentDiscountResponseDto paymentDiscountInfo;
 
     @Schema(description = "사용된 포인트 금액 (없으면 0)", example = "1000")
     private Integer usedPointAmount;
@@ -57,4 +59,18 @@ public class BeforePaymentResponseDto {
 
     @Schema(description = "결제가 요청된 시각", example = "2025-06-22T14:30:00")
     private LocalDateTime requestedAt;
+
+    @Builder
+    public BeforePaymentResponseDto(Payment payment, PaymentDiscountResponseDto paymentDiscountInfo) {
+        this.paymentId = payment.getId();
+        this.reservationId = payment.getReservation().getId();
+        this.orderId = payment.getOrderId();
+        this.paymentMethod = payment.getPaymentMethod();
+        this.paymentStatus = payment.getPaymentStatus();
+        this.paymentDiscountInfo = paymentDiscountInfo;
+        this.usedPointAmount = payment.getUsedPointAmount();
+        this.amount = payment.getAmount();
+        this.finalAmount = payment.getFinalAmount();
+        this.requestedAt = payment.getRequestedAt();
+    }
 }

@@ -14,7 +14,8 @@ public enum PaymentStatus implements BaseEnum {
     IN_PROGRESS,
     PARTIAL_CANCELED,
     READY,
-    WAITING_FOR_DEPOSIT;
+    WAITING_FOR_DEPOSIT,
+    REFUNDED;
 
     @Override
     public String getValue() { return name(); }

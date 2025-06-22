@@ -87,12 +87,13 @@ public class Payment {
         this.reservation = reservation;
     }
 
+    public void setPaymentKey(String paymentKey) { this.paymentKey = paymentKey; }
+
+    public void setApprovedAt(LocalDateTime approvedAt) { this.approvedAt = approvedAt; }
+
+    public void updateRequestedAt(LocalDateTime requestedAt) { this.requestedAt = requestedAt; }
+
     public void updateStatus(PaymentStatus paymentStatus) {
         this.paymentStatus = paymentStatus;
-    }
-
-    public void approve() {
-        this.paymentStatus = PaymentStatus.DONE;
-        this.approvedAt = LocalDateTime.now();
     }
 }
