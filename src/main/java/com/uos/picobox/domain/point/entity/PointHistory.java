@@ -1,5 +1,6 @@
 package com.uos.picobox.domain.point.entity;
 
+import com.uos.picobox.global.converter.PointChangeTypeConverter;
 import com.uos.picobox.global.enumClass.PointChangeType;
 import com.uos.picobox.user.entity.Customer;
 import jakarta.persistence.*;
@@ -26,7 +27,7 @@ public class PointHistory {
     private Customer customer;
 
     @Column(name = "CHANGE_TYPE", nullable = false, length = 10)
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = PointChangeTypeConverter.class)
     private PointChangeType changeType;
 
     @Column(name = "AMOUNT", nullable = false)
