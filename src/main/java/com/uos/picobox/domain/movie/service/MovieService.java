@@ -5,6 +5,8 @@ import com.uos.picobox.domain.movie.dto.movie.MovieRequestDto;
 import com.uos.picobox.domain.movie.dto.movie.MovieResponseDto;
 import com.uos.picobox.domain.movie.entity.*;
 import com.uos.picobox.domain.movie.repository.*;
+import com.uos.picobox.domain.reservation.repository.ReservationRepository;
+import com.uos.picobox.domain.review.repository.ReviewRepository;
 import com.uos.picobox.global.service.S3Service;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityNotFoundException;
@@ -18,6 +20,8 @@ import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.exception.SdkException;
 
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -35,6 +39,8 @@ public class MovieService {
     private final MovieGenreRepository movieGenreRepository;
     private final ActorRepository actorRepository;
     private final S3Service s3Service;
+    private final ReservationRepository reservationRepository;
+    private final ReviewRepository reviewRepository;
 
     // --- 관리자용 CRUD 메소드 ---
 
@@ -231,6 +237,12 @@ public class MovieService {
             return Collections.emptyList();
         }
 
+        // 전체 예매 관객 수 조회
+        Long totalAudience = reservationRepository.countTotalReservedAudience();
+        if (totalAudience == null) {
+            totalAudience = 0L;
+        }
+
         List<MovieListItemDtoInternal> processedMovies = new ArrayList<>();
 
         for (Movie movie : candidateMovies) {
@@ -251,21 +263,64 @@ public class MovieService {
             }
 
             if ("NOW_PLAYING".equals(status) || "UPCOMING".equals(status)) {
-                processedMovies.add(new MovieListItemDtoInternal(movie, status));
+                // 예매율 계산
+                Double reservationRate = null;
+                if ("NOW_PLAYING".equals(status)) {
+                    Long movieAudience = reservationRepository.countReservedAudienceByMovieId(movie.getId());
+                    if (movieAudience == null) {
+                        movieAudience = 0L;
+                    }
+                    
+                    if (totalAudience > 0) {
+                        double rate = (movieAudience.doubleValue() / totalAudience.doubleValue()) * 100;
+                        reservationRate = BigDecimal.valueOf(rate)
+                                .setScale(2, RoundingMode.HALF_UP)
+                                .doubleValue();
+                    } else {
+                        reservationRate = 0.0;
+                    }
+                }
+
+                // 리뷰 평점 계산
+                Double reviewRating = reviewRepository.calculateAverageRatingByMovieId(movie.getId());
+                if (reviewRating != null) {
+                    reviewRating = BigDecimal.valueOf(reviewRating)
+                            .setScale(2, RoundingMode.HALF_UP)
+                            .doubleValue();
+                }
+
+                processedMovies.add(new MovieListItemDtoInternal(movie, status, reservationRate, reviewRating));
             }
         }
 
+        // 정렬: 현재 상영작 우선, 그 다음 예매율 높은 순, 예매율 같으면 개봉일 최신순
         processedMovies.sort(Comparator
                 .comparing(MovieListItemDtoInternal::getStatusSortOrder)
+                .thenComparing(m -> m.getReservationRate() != null ? m.getReservationRate() : -1.0, Comparator.reverseOrder())
                 .thenComparing(m -> m.getMovie().getReleaseDate(), Comparator.reverseOrder())
                 .thenComparing(m -> m.getMovie().getId(), Comparator.reverseOrder())
         );
 
+        // 랭킹 부여 (상영 중인 영화만)
         List<MovieListItemDto> result = new ArrayList<>();
-        for (int i = 0; i < processedMovies.size(); i++) {
-            Movie movie = processedMovies.get(i).getMovie();
-            result.add(MovieListItemDto.fromEntity(movie, i + 1));
+        int currentRank = 1;
+        
+        for (MovieListItemDtoInternal movieInternal : processedMovies) {
+            Integer rank = null;
+            
+            // 현재 상영 중인 영화만 랭킹 부여
+            if ("NOW_PLAYING".equals(movieInternal.getStatus())) {
+                rank = currentRank++;
+            }
+            
+            result.add(MovieListItemDto.fromEntity(
+                    movieInternal.getMovie(), 
+                    rank, 
+                    movieInternal.getReservationRate(), 
+                    movieInternal.getReviewRating()
+            ));
         }
+        
         return result;
     }
 
@@ -274,12 +329,22 @@ public class MovieService {
         private final Movie movie;
         private final String status;
         private final int statusSortOrder;
-        public MovieListItemDtoInternal(Movie movie, String status) {
+        private final Double reservationRate;
+        private final Double reviewRating;
+        
+        public MovieListItemDtoInternal(Movie movie, String status, Double reservationRate, Double reviewRating) {
             this.movie = movie;
             this.status = status;
-            if ("NOW_PLAYING".equals(status)) {this.statusSortOrder = 0;}
-            else if ("UPCOMING".equals(status)) {this.statusSortOrder = 1;}
-            else {this.statusSortOrder = 2;}
+            this.reservationRate = reservationRate;
+            this.reviewRating = reviewRating;
+            
+            if ("NOW_PLAYING".equals(status)) {
+                this.statusSortOrder = 0;
+            } else if ("UPCOMING".equals(status)) {
+                this.statusSortOrder = 1;
+            } else {
+                this.statusSortOrder = 2;
+            }
         }
     }
 }
