@@ -17,6 +17,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @Tag(name = "05. 회원/게스트 - 티켓 예매", description = "좌석 선택, 예매, 결제 완료 처리 API (회원/게스트 모두 이용 가능)")
 @RestController
@@ -39,7 +40,8 @@ public class ReservationController {
             @Valid @RequestBody SeatRequestDto dto,
             @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId,
             Authentication authentication) {
-        reservationService.holdSeats(dto, authentication);
+        Map<String, Object> sessionInfo = sessionUtils.findSessionInfoByAuthentication(authentication);
+        reservationService.holdSeats(dto, sessionInfo);
         return ResponseEntity.ok().build();
     }
 
@@ -54,7 +56,8 @@ public class ReservationController {
             @Valid @RequestBody SeatRequestDto dto,
             @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId,
             Authentication authentication) {
-        reservationService.releaseSeats(dto, authentication);
+        Map<String, Object> sessionInfo = sessionUtils.findSessionInfoByAuthentication(authentication);
+        reservationService.releaseSeats(dto, sessionInfo);
         return ResponseEntity.ok().build();
     }
 
@@ -70,7 +73,8 @@ public class ReservationController {
             @Valid @RequestBody ReservationRequestDto dto,
             @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId,
             Authentication authentication) {
-        ReservationResponseDto responseDto = reservationService.createPendingReservation(dto, authentication);
+        Map<String, Object> sessionInfo = sessionUtils.findSessionInfoByAuthentication(authentication);
+        ReservationResponseDto responseDto = reservationService.createPendingReservation(dto, sessionInfo);
         return ResponseEntity.status(HttpStatus.CREATED).body(responseDto);
     }
 
@@ -86,7 +90,8 @@ public class ReservationController {
             @Valid @RequestBody PaymentRequestDto dto,
             @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId,
             Authentication authentication) {
-        reservationService.completeReservation(dto, authentication);
+        Map<String, Object> sessionInfo = sessionUtils.findSessionInfoByAuthentication(authentication);
+        reservationService.completeReservation(dto, sessionInfo);
         return ResponseEntity.ok().build();
     }
 
@@ -99,7 +104,8 @@ public class ReservationController {
     public ResponseEntity<List<ReservationListResponseDto>> getMyReservations(
             @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId,
             Authentication authentication) {
-        List<ReservationListResponseDto> reservations = reservationService.getReservationList(authentication);
+        Map<String, Object> sessionInfo = sessionUtils.findSessionInfoByAuthentication(authentication);
+        List<ReservationListResponseDto> reservations = reservationService.getReservationList(sessionInfo);
         return ResponseEntity.ok(reservations);
     }
 
@@ -114,7 +120,8 @@ public class ReservationController {
             @Parameter(description = "예매 ID", required = true) @PathVariable Long reservationId,
             @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId,
             Authentication authentication) {
-        ReservationDetailResponseDto detail = reservationService.getReservationDetail(reservationId, authentication);
+        Map<String, Object> sessionInfo = sessionUtils.findSessionInfoByAuthentication(authentication);
+        ReservationDetailResponseDto detail = reservationService.getReservationDetail(reservationId, sessionInfo);
         return ResponseEntity.ok(detail);
     }
 
@@ -129,7 +136,8 @@ public class ReservationController {
             @Parameter(description = "예매 ID", required = true) @PathVariable Long reservationId,
             @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId,
             Authentication authentication) {
-        TicketResponseDto ticket = reservationService.getTicket(reservationId, authentication);
+        Map<String, Object> sessionInfo = sessionUtils.findSessionInfoByAuthentication(authentication);
+        TicketResponseDto ticket = reservationService.getTicket(reservationId, sessionInfo);
         return ResponseEntity.ok(ticket);
     }
 }

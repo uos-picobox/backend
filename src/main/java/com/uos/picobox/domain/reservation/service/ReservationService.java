@@ -51,48 +51,16 @@ public class ReservationService {
     private static final int SEAT_HOLD_MINUTES = 10;
 
     /**
-     * 사용자 정보를 Authentication에서 추출합니다.
-     */
-    private Map<String, Object> getUserInfo(Authentication authentication) {
-        String value = (String) authentication.getPrincipal();
-        Map<String, String> sessionInfo = sessionUtils.splitSessionValue(value);
-        String type = sessionInfo.get("type");
-        
-        if ("customer".equals(type)) {
-            String loginId = sessionInfo.get("value");
-            Long customerId = customerRepository.findIdByLoginId(loginId);
-            if (customerId == null) {
-                throw new EntityNotFoundException("고객 정보를 찾을 수 없습니다: " + loginId);
-            }
-            Customer customer = customerRepository.findById(customerId)
-                    .orElseThrow(() -> new EntityNotFoundException("고객 정보를 찾을 수 없습니다: " + customerId));
-            return Map.of("type", "customer", "id", customerId, "entity", customer);
-        } else if ("guest".equals(type)) {
-            String email = sessionInfo.get("value");
-            Long guestId = guestRepository.findIdByEmail(email);
-            if (guestId == null) {
-                throw new EntityNotFoundException("게스트 정보를 찾을 수 없습니다: " + email);
-            }
-            Guest guest = guestRepository.findById(guestId)
-                    .orElseThrow(() -> new EntityNotFoundException("게스트 정보를 찾을 수 없습니다: " + guestId));
-            return Map.of("type", "guest", "id", guestId, "entity", guest);
-        } else {
-            throw new IllegalArgumentException("잘못된 session 정보입니다.");
-        }
-    }
-
-    /**
      * 사용자가 선택한 좌석들을 일정 시간 동안 선점합니다.
      * 선점된 좌석은 다른 사용자가 선택할 수 없으며, 지정된 시간(10분) 후 자동으로 해제됩니다.
      * 
      * @param dto 선점할 좌석 정보 (상영 ID, 좌석 ID 목록)
-     * @param authentication 사용자 인증 정보
+     * @param userInfo 사용자 인증 정보
      * @throws IllegalStateException 이미 선점되었거나 판매된 좌석인 경우
      * @throws EntityNotFoundException 존재하지 않는 좌석인 경우
      */
     @Transactional
-    public void holdSeats(SeatRequestDto dto, Authentication authentication) {
-        Map<String, Object> userInfo = getUserInfo(authentication);
+    public void holdSeats(SeatRequestDto dto, Map<String, Object> userInfo) {
         String userType = (String) userInfo.get("type");
         Long userId = (Long) userInfo.get("id");
         
@@ -128,13 +96,12 @@ public class ReservationService {
      * 선점한 본인만 해제할 수 있으며, 해제된 좌석은 다시 예매 가능 상태가 됩니다.
      * 
      * @param dto 해제할 좌석 정보 (상영 ID, 좌석 ID 목록)
-     * @param authentication 사용자 인증 정보
+     * @param userInfo 사용자 인증 정보
      * @throws IllegalStateException 다른 고객이 선점한 좌석을 해제하려는 경우
      * @throws EntityNotFoundException 존재하지 않는 좌석인 경우
      */
     @Transactional
-    public void releaseSeats(SeatRequestDto dto, Authentication authentication) {
-        Map<String, Object> userInfo = getUserInfo(authentication);
+    public void releaseSeats(SeatRequestDto dto, Map<String, Object> userInfo) {
         String userType = (String) userInfo.get("type");
         Long userId = (Long) userInfo.get("id");
         
@@ -168,14 +135,13 @@ public class ReservationService {
      * 실제 결제는 별도의 completeReservation 메소드를 통해 완료됩니다.
      * 
      * @param dto 예매 정보 (상영 ID, 티켓 정보, 사용 포인트)
-     * @param authentication 사용자 인증 정보
+     * @param userInfo 사용자 인증 정보
      * @return 생성된 예매 정보
      * @throws IllegalStateException 선점되지 않은 좌석을 예매하려는 경우
      * @throws EntityNotFoundException 고객, 상영, 가격 정보를 찾을 수 없는 경우
      */
     @Transactional
-    public ReservationResponseDto createPendingReservation(ReservationRequestDto dto, Authentication authentication) {
-        Map<String, Object> userInfo = getUserInfo(authentication);
+    public ReservationResponseDto createPendingReservation(ReservationRequestDto dto, Map<String, Object> userInfo) {
         String userType = (String) userInfo.get("type");
         Long userId = (Long) userInfo.get("id");
 
@@ -223,8 +189,10 @@ public class ReservationService {
         }
 
         // 포인트 사용 (회원만 가능)
+        Customer customer = null;
         if ("customer".equals(userType)) {
-            Customer customer = (Customer) userInfo.get("entity");
+            customer = customerRepository.findById(userId)
+                    .orElseThrow(() -> new EntityNotFoundException("고객 정보를 찾을 수 없습니다: " + userId));
             customer.usePoints(dto.getUsedPoints());
         } else if (dto.getUsedPoints() > 0) {
             throw new IllegalArgumentException("게스트는 포인트를 사용할 수 없습니다.");
@@ -235,7 +203,6 @@ public class ReservationService {
         // 예매 생성 (회원/게스트 구분)
         Reservation reservation;
         if ("customer".equals(userType)) {
-            Customer customer = (Customer) userInfo.get("entity");
             reservation = Reservation.builder()
                     .customer(customer)
                     .screeningId(dto.getScreeningId())
@@ -243,7 +210,8 @@ public class ReservationService {
                     .paymentStatus(PaymentStatus.PENDING)
                     .build();
         } else {
-            Guest guest = (Guest) userInfo.get("entity");
+            Guest guest = guestRepository.findById(userId)
+                    .orElseThrow(() -> new EntityNotFoundException("게스트 정보를 찾을 수 없습니다: " + userId));
             reservation = Reservation.builder()
                     .guest(guest)
                     .screeningId(dto.getScreeningId())
@@ -282,7 +250,6 @@ public class ReservationService {
         }
 
         if (dto.getUsedPoints() > 0 && "customer".equals(userType)) {
-            Customer customer = (Customer) userInfo.get("entity");
             PointHistory pointHistory = PointHistory.builder()
                     .customer(customer)
                     .changeType(PointChangeType.USED)
@@ -304,14 +271,13 @@ public class ReservationService {
      * 결제 정보를 저장하고 포인트 적립을 처리합니다.
      * 
      * @param dto 결제 정보 (예매 ID, 주문 ID, 결제 키, 결제 방법 등)
-     * @param authentication 사용자 인증 정보
+     * @param userInfo 사용자 인증 정보
      * @throws IllegalArgumentException 예약자 정보가 일치하지 않는 경우
      * @throws IllegalStateException 이미 처리되었거나 취소된 예약인 경우
      * @throws EntityNotFoundException 예약 정보를 찾을 수 없는 경우
      */
     @Transactional
-    public void completeReservation(PaymentRequestDto dto, Authentication authentication) {
-        Map<String, Object> userInfo = getUserInfo(authentication);
+    public void completeReservation(PaymentRequestDto dto, Map<String, Object> userInfo) {
         String userType = (String) userInfo.get("type");
         Long userId = (Long) userInfo.get("id");
         
@@ -407,11 +373,10 @@ public class ReservationService {
 
     /**
      * 고객의 예매 내역을 조회합니다.
-     * @param authentication 사용자 인증 정보
+     * @param userInfo 사용자 인증 정보
      * @return 예매 내역 목록
      */
-    public List<ReservationResponseDto> getReservationsByCustomerId(Authentication authentication) {
-        Map<String, Object> userInfo = getUserInfo(authentication);
+    public List<ReservationResponseDto> getReservationsByCustomerId(Map<String, Object> userInfo) {
         String userType = (String) userInfo.get("type");
         Long userId = (Long) userInfo.get("id");
         
@@ -443,8 +408,7 @@ public class ReservationService {
     /**
      * 사용자의 예매 내역을 조회합니다. (과거/현재 구분, 회원/게스트 지원)
      */
-    public List<ReservationListResponseDto> getReservationList(Authentication authentication) {
-        Map<String, Object> userInfo = getUserInfo(authentication);
+    public List<ReservationListResponseDto> getReservationList(Map<String, Object> userInfo) {
         String userType = (String) userInfo.get("type");
         Long userId = (Long) userInfo.get("id");
         
@@ -503,8 +467,7 @@ public class ReservationService {
     /**
      * 예매 상세 정보를 조회합니다.
      */
-    public ReservationDetailResponseDto getReservationDetail(Long reservationId, Authentication authentication) {
-        Map<String, Object> userInfo = getUserInfo(authentication);
+    public ReservationDetailResponseDto getReservationDetail(Long reservationId, Map<String, Object> userInfo) {
         String userType = (String) userInfo.get("type");
         Long userId = (Long) userInfo.get("id");
         
@@ -563,8 +526,7 @@ public class ReservationService {
     /**
      * 모바일 티켓 정보를 조회합니다.
      */
-    public TicketResponseDto getTicket(Long reservationId, Authentication authentication) {
-        Map<String, Object> userInfo = getUserInfo(authentication);
+    public TicketResponseDto getTicket(Long reservationId, Map<String, Object> userInfo) {
         String userType = (String) userInfo.get("type");
         Long userId = (Long) userInfo.get("id");
         
