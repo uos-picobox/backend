@@ -156,7 +156,7 @@ public class AdminActorController {
     @GetMapping("/get/{actorId}")
     public ResponseEntity<ActorResponseDto> getActorById(
             @Parameter(description = "조회할 배우 ID", required = true) @PathVariable Long actorId) {
-        ActorResponseDto actor = actorService.findActorById(actorId);
+        ActorResponseDto actor = actorService.findActorByIdWithFilmography(actorId);
         return ResponseEntity.ok(actor);
     }
 

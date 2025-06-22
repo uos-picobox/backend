@@ -15,4 +15,6 @@ public interface GuestRepository extends JpaRepository<Guest, Long> {
     @Modifying
     @Query("DELETE FROM Guest g WHERE g.expirationDate < :threshold ")
     void deleteExpiredGuests(@Param("threshold") LocalDateTime threshold);
+    @Query("SELECT g.id FROM Guest g WHERE g.email = :email")
+    Long findIdByEmail(@Param("email") String email);
 }

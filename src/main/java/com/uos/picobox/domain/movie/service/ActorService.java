@@ -185,4 +185,25 @@ public class ActorService {
                 .orElseThrow(() -> new EntityNotFoundException("해당 ID의 배우를 찾을 수 없습니다: " + actorId));
         return new ActorResponseDto(actor);
     }
+
+    /**
+     * 배우 정보와 필모그래피를 함께 조회합니다.
+     */
+    public ActorResponseDto findActorByIdWithFilmography(Long actorId) {
+        Actor actor = actorRepository.findById(actorId)
+                .orElseThrow(() -> new EntityNotFoundException("해당 ID의 배우를 찾을 수 없습니다: " + actorId));
+        
+        // 필모그래피 정보 조회
+        List<Object[]> filmographyData = actorRepository.findFilmographyByActorId(actorId);
+        List<ActorResponseDto.FilmographyDto> filmography = filmographyData.stream()
+                .map(row -> new ActorResponseDto.FilmographyDto(
+                        (Long) row[0],        // movieId
+                        (String) row[1],      // title
+                        (Integer) row[2],     // releaseYear
+                        (String) row[3]       // posterUrl
+                ))
+                .collect(Collectors.toList());
+        
+        return new ActorResponseDto(actor, filmography);
+    }
 }

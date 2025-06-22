@@ -1,5 +1,6 @@
 package com.uos.picobox.domain.point.entity;
 
+import com.uos.picobox.global.enumClass.PointChangeType;
 import com.uos.picobox.user.entity.Customer;
 import jakarta.persistence.*;
 import lombok.AccessLevel;

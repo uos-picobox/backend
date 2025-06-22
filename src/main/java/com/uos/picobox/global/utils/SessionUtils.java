@@ -39,10 +39,14 @@ public class SessionUtils {
         cache.evict(sessionId);
 
         String value = (String) wrapper.get();
+        String[] parts = Objects.requireNonNull(value).split(":", 2);
+        String type = parts[0];
+        String realValue = parts[1];
         LocalDateTime expirationTime = LocalDateTime.now();
         String formattedExpiration = expirationTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
         return Map.of(
-                "value", Objects.requireNonNull(value),
+                "type", type,
+                "value", realValue,
                 "expiration", formattedExpiration
         );
     }
@@ -55,5 +59,15 @@ public class SessionUtils {
         }
         String value = (String) wrapper.get();
         return Objects.requireNonNull(value);
+    }
+
+    public Map<String, String> splitSessionValue(String value) {
+        String[] parts = Objects.requireNonNull(value).split(":", 2);
+        String type = parts[0];
+        String realValue = parts[1];
+        return Map.of(
+                "type", type,
+                "value", realValue
+        );
     }
 }
