@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
-@Tag(name = "05. 회원/게스트 - 티켓 예매", description = "좌석 선택, 예매, 결제 완료 처리 API (회원/게스트 모두 이용 가능)")
+@Tag(name = "05. 회원/비회원 - 티켓 예매", description = "좌석 선택, 예매, 결제 완료 처리 API (회원/게스트 모두 이용 가능)")
 @RestController
 @RequestMapping("/api/protected/reservations")
 @RequiredArgsConstructor

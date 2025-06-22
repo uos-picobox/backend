@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
-@Tag(name = "07. 회원/게스트 - 결제", description = "결제 전 정보 저장, 결제 후 Confirm 요청 API (회원/게스트 모두 이용 가능)")
+@Tag(name = "07. 회원/비회원 - 결제", description = "결제 전 정보 저장, 결제 후 Confirm 요청 API (회원/게스트 모두 이용 가능)")
 @RestController
 @RequestMapping("/api/protected/payment")
 @RequiredArgsConstructor
