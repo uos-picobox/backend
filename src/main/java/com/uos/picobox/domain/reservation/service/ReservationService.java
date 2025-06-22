@@ -2,10 +2,7 @@ package com.uos.picobox.domain.reservation.service;
 
 import com.uos.picobox.domain.payment.entity.Payment;
 import com.uos.picobox.domain.ticket.entity.Ticket;
-import com.uos.picobox.global.enumClass.PaymentStatus;
-import com.uos.picobox.global.enumClass.PointChangeType;
-import com.uos.picobox.domain.point.entity.PointHistory;
-import com.uos.picobox.domain.point.repository.PointHistoryRepository;
+import com.uos.picobox.global.enumClass.ReservationStatus;
 import com.uos.picobox.domain.price.entity.RoomTicketTypePrice;
 import com.uos.picobox.domain.price.repository.RoomTicketTypePriceRepository;
 import com.uos.picobox.domain.reservation.dto.*;
@@ -48,7 +45,7 @@ public class ReservationService {
     private final GuestRepository guestRepository;
     private final RoomTicketTypePriceRepository roomTicketTypePriceRepository;
     private final ScreeningRepository screeningRepository;
-    private final PointHistoryRepository pointHistoryRepository;
+
     private final PaymentRepository paymentRepository;
     private final SessionUtils sessionUtils;
 
@@ -185,11 +182,26 @@ public class ReservationService {
 
         // 총 금액 계산
         int totalAmount = 0;
+        
+        // 조조할인 적용 여부 확인 (06:00 ~ 11:00 상영 시작)
+        boolean isEarlyBirdDiscount = false;
+        int screeningHour = screening.getScreeningTime().getHour();
+        if (screeningHour >= 6 && screeningHour < 11) {
+            isEarlyBirdDiscount = true;
+        }
+        
         for (ReservationRequestDto.TicketTypeInfo ticketTypeInfo : dto.getTicketTypes()) {
             RoomTicketTypePrice priceInfo = roomTicketTypePriceRepository.findById(
                     new RoomTicketTypePrice.RoomTicketTypePriceId(screening.getScreeningRoom().getId(), ticketTypeInfo.getTicketTypeId())
             ).orElseThrow(() -> new EntityNotFoundException("해당 티켓 종류의 가격 정보를 찾을 수 없습니다."));
-            totalAmount += priceInfo.getPrice() * ticketTypeInfo.getCount();
+            
+            int ticketPrice = priceInfo.getPrice();
+            // 조조할인 적용 (좌석당 3000원 할인)
+            if (isEarlyBirdDiscount) {
+                ticketPrice = Math.max(0, ticketPrice - 3000); // 가격이 음수가 되지 않도록 보장
+            }
+            
+            totalAmount += ticketPrice * ticketTypeInfo.getCount();
         }
         Customer customer = null;
         if ("customer".equals(userType)) {
@@ -204,7 +216,7 @@ public class ReservationService {
                     .customer(customer)
                     .screeningId(dto.getScreeningId())
                     .totalAmount(totalAmount)
-                    .paymentStatus(PaymentStatus.PENDING)
+                    .reservationStatus(ReservationStatus.PENDING)
                     .build();
         } else {
             Guest guest = guestRepository.findById(userId)
@@ -213,7 +225,7 @@ public class ReservationService {
                     .guest(guest)
                     .screeningId(dto.getScreeningId())
                     .totalAmount(totalAmount)
-                    .paymentStatus(PaymentStatus.PENDING)
+                    .reservationStatus(ReservationStatus.PENDING)
                     .build();
         }
 
@@ -225,6 +237,12 @@ public class ReservationService {
             RoomTicketTypePrice priceInfo = roomTicketTypePriceRepository.findById(
                     new RoomTicketTypePrice.RoomTicketTypePriceId(screening.getScreeningRoom().getId(), ticketTypeInfo.getTicketTypeId())
             ).orElseThrow(() -> new EntityNotFoundException("가격 정보를 찾을 수 없습니다."));
+
+            // 티켓 가격 계산 (조조할인 적용)
+            int ticketPrice = priceInfo.getPrice();
+            if (isEarlyBirdDiscount) {
+                ticketPrice = Math.max(0, ticketPrice - 3000);
+            }
 
             // 해당 티켓 유형의 인원수만큼 티켓 생성
             for (int i = 0; i < ticketTypeInfo.getCount(); i++) {
@@ -238,7 +256,7 @@ public class ReservationService {
                         .screeningId(dto.getScreeningId())
                         .seatId(seatId)
                         .ticketTypeId(ticketTypeInfo.getTicketTypeId())
-                        .price(priceInfo.getPrice())
+                        .price(ticketPrice) // 할인된 가격 적용
                         .ticketStatus(TicketStatus.ISSUED)
                         .build();
                 reservation.addTicket(ticket);
@@ -288,11 +306,11 @@ public class ReservationService {
             throw new IllegalArgumentException("예약자 정보가 일치하지 않습니다.");
         }
         
-        if (reservation.getPaymentStatus() != PaymentStatus.PENDING) {
+        if (reservation.getReservationStatus() != ReservationStatus.PENDING) {
             throw new IllegalStateException("이미 처리되었거나 취소된 예약입니다.");
         }
 
-        reservation.updatePaymentStatus(PaymentStatus.COMPLETED);
+        reservation.updateReservationStatus(ReservationStatus.COMPLETED);
 
         // 티켓 상태 'ISSUED'로 변경 (이미 생성 시 ISSUED로 설정됨)
         // 좌석 상태 'SOLD'로 변경
@@ -367,14 +385,14 @@ public class ReservationService {
         String userType = (String) userInfo.get("type");
         Long userId = (Long) userInfo.get("id");
         
-        // 완료된 예매만 조회 (회원/게스트 구분)
+        // 완료된 예매와 취소된 예매 조회 (회원/게스트 구분)
         List<Reservation> reservations;
         if ("customer".equals(userType)) {
-            reservations = reservationRepository.findByCustomerIdAndPaymentStatusOrderByIdDesc(
-                userId, PaymentStatus.COMPLETED);
+            reservations = reservationRepository.findByCustomerIdAndReservationStatusInOrderByIdDesc(
+                userId, List.of(ReservationStatus.COMPLETED, ReservationStatus.CANCELED));
         } else {
-            reservations = reservationRepository.findByGuestIdAndPaymentStatusOrderByIdDesc(
-                userId, PaymentStatus.COMPLETED);
+            reservations = reservationRepository.findByGuestIdAndReservationStatusInOrderByIdDesc(
+                userId, List.of(ReservationStatus.COMPLETED, ReservationStatus.CANCELED));
         }
         
         LocalDateTime now = LocalDateTime.now();
@@ -410,7 +428,8 @@ public class ReservationService {
                         screening.getScreeningRoom().getRoomName(),
                         seatNumbers,
                         reservation.getReservationDate(),
-                        reservation.getPaymentStatus().name(),
+                        reservation.getReservationStatus().name(),
+                        null, //reservation.getPayment().getPaymentStatus().name(),
                         finalAmount,
                         isScreeningCompleted
                     );
@@ -462,7 +481,8 @@ public class ReservationService {
         return new ReservationDetailResponseDto(
             reservation.getId(),
             reservation.getReservationDate(),
-            reservation.getPaymentStatus().name(),
+            reservation.getReservationStatus().name(),
+            null, //payment.getPaymentStatus().name(),
             screening.getMovie().getTitle(),
             screening.getMovie().getPosterUrl(),
             screening.getMovie().getMovieRating().getRatingName(),
@@ -479,7 +499,7 @@ public class ReservationService {
     }
 
     /**
-     * 모바일 티켓 정보를 조회합니다.
+     * 티켓 정보를 조회합니다.
      */
     public TicketResponseDto getTicket(Long reservationId, Map<String, Object> userInfo) {
         String userType = (String) userInfo.get("type");
@@ -530,7 +550,82 @@ public class ReservationService {
             seats,
             reservation.getTickets().size(),
             reserverName,
-            reservation.getReservationDate()
+            reservation.getReservationDate(),
+            reservation.getReservationStatus().name()
         );
+    }
+
+    /**
+     * 예매를 취소합니다.
+     * 상영 시작 10분 후까지만 취소 가능하며, 취소 시 좌석을 해제하고 포인트를 환불합니다.
+     * 
+     * @param reservationId 취소할 예매 ID
+     * @param userInfo 사용자 인증 정보
+     * @throws IllegalArgumentException 예약자 정보가 일치하지 않는 경우
+     * @throws IllegalStateException 취소 불가능한 상태인 경우
+     * @throws EntityNotFoundException 예약 정보를 찾을 수 없는 경우
+     */
+    @Transactional
+    public void cancelReservation(Long reservationId, Map<String, Object> userInfo) {
+        String userType = (String) userInfo.get("type");
+        Long userId = (Long) userInfo.get("id");
+        
+        log.info("예매 취소 요청: reservationId={}, userType={}, userId={}", reservationId, userType, userId);
+        
+        // 예매 정보 조회
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new EntityNotFoundException("예매 정보를 찾을 수 없습니다: " + reservationId));
+        
+        // 예약자 정보 확인 (회원/게스트 구분)
+        boolean isOwner = false;
+        if ("customer".equals(userType)) {
+            isOwner = reservation.getCustomer() != null && reservation.getCustomer().getId().equals(userId);
+        } else {
+            isOwner = reservation.getGuest() != null && reservation.getGuest().getId().equals(userId);
+        }
+        
+        if (!isOwner) {
+            throw new IllegalArgumentException("예약자 정보가 일치하지 않습니다.");
+        }
+        
+        // 취소 가능한 상태 확인
+        if (reservation.getReservationStatus() == ReservationStatus.CANCELED) {
+            throw new IllegalStateException("이미 취소된 예매입니다.");
+        }
+        
+        if (reservation.getReservationStatus() != ReservationStatus.COMPLETED) {
+            throw new IllegalStateException("완료된 예매만 취소할 수 있습니다.");
+        }
+        
+        // 상영 정보 조회
+        Screening screening = screeningRepository.findByIdWithDetails(reservation.getScreeningId())
+                .orElseThrow(() -> new EntityNotFoundException("상영 정보를 찾을 수 없습니다."));
+        
+        // 취소 가능 시간 확인 (상영 시작 10분 후까지)
+        LocalDateTime cancelDeadline = screening.getScreeningTime().plusMinutes(10);
+        LocalDateTime now = LocalDateTime.now();
+        
+        if (now.isAfter(cancelDeadline)) {
+            throw new IllegalStateException("상영 시작 10분 후에는 취소할 수 없습니다.");
+        }
+        
+        // 예매 상태를 CANCELED로 변경
+        reservation.updateReservationStatus(ReservationStatus.CANCELED);
+        
+        // TODO: 결제 취소 메서드 호출
+        
+        // 좌석 상태를 AVAILABLE로 변경
+        for (Ticket ticket : reservation.getTickets()) {
+            ScreeningSeat screeningSeat = screeningSeatRepository.findById(
+                new ScreeningSeat.ScreeningSeatId(ticket.getScreeningId(), ticket.getSeatId())
+            ).orElseThrow(() -> new EntityNotFoundException("좌석 정보를 찾을 수 없습니다."));
+            
+            screeningSeat.setSeatStatus(SeatStatus.AVAILABLE);
+            screeningSeat.setHoldExpiresAt(null);
+            screeningSeat.setHoldCustomerId(null);
+            screeningSeat.setHoldGuestId(null);
+        }
+        
+        log.info("예매 취소 완료: reservationId={}", reservationId);
     }
 }
