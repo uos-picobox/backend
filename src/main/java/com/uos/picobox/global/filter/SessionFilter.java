@@ -17,10 +17,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @RequiredArgsConstructor
 public class SessionFilter extends OncePerRequestFilter {
@@ -35,8 +32,8 @@ public class SessionFilter extends OncePerRequestFilter {
 
         if (customerMatcher.matches(request)) {
             try {
-                authenticateBySession(request, response, "customerSession", "CUSTOMER");
-            } catch (IOException e) {
+                authenticateBySession(request, response, "userSession", "CUSTOMER");
+            } catch (Exception e) {
                 return;
             }
 
@@ -44,14 +41,14 @@ public class SessionFilter extends OncePerRequestFilter {
         else if (adminMatcher.matches(request)) {
             try {
                 authenticateBySession(request, response, "adminSession", "ADMIN");
-            } catch (IOException e) {
+            } catch (Exception e) {
                 return;
             }
         }
         else if (guestMatcher.matches(request)) {
             try {
-                authenticateBySession(request, response, "guestSession", "GUEST");
-            } catch (IOException e) {
+                authenticateBySession(request, response, "userSession", "GUEST");
+            } catch (Exception e) {
                 return;
             }
         }
@@ -70,13 +67,13 @@ public class SessionFilter extends OncePerRequestFilter {
             throw new IOException("Authorization 헤더가 존재하지 않습니다.");
         }
 
-        String loginId = sessionUtils.existSession(cacheName, sessionId);
+        String value = sessionUtils.existSession(cacheName, sessionId);
         List<SimpleGrantedAuthority> authorities =
                 Collections.singletonList(new SimpleGrantedAuthority(role));
 
         // Authentication 객체 생성
         UsernamePasswordAuthenticationToken authentication =
-                new UsernamePasswordAuthenticationToken(loginId, null, authorities);
+                new UsernamePasswordAuthenticationToken(value, null, authorities);
         SecurityContextHolder.getContext().setAuthentication(authentication);
     }
 }
