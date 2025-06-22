@@ -27,7 +27,7 @@ public class BeforePaymentRequestDto {
     @Schema(description = "결제 시스템에서 생성된 주문 ID", example = "ORDER_20241221_001", requiredMode = Schema.RequiredMode.REQUIRED)
     private String orderId;
 
-    @NotBlank(message = "결제 수단 정보는 필수입니다.")
+    @NotNull(message = "결제 수단 정보는 필수입니다.")
     @Schema(description = "결제 수단",
             example = "CARD", requiredMode = Schema.RequiredMode.REQUIRED,
             allowableValues = {"CARD", "VIRTUAL_ACCOUNT", "EASY_PAY", "GAME_GIFT", "TRANSFER", "BOOK_GIFT", "CULTURE_GIFT", "MOBILE"})
