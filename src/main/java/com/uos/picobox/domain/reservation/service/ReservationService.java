@@ -1,5 +1,8 @@
 package com.uos.picobox.domain.reservation.service;
 
+import com.uos.picobox.domain.payment.entity.Payment;
+import com.uos.picobox.domain.ticket.entity.Ticket;
+import com.uos.picobox.global.enumClass.PaymentStatus;
 import com.uos.picobox.global.enumClass.PointChangeType;
 import com.uos.picobox.domain.point.entity.PointHistory;
 import com.uos.picobox.domain.point.repository.PointHistoryRepository;
@@ -7,13 +10,14 @@ import com.uos.picobox.domain.price.entity.RoomTicketTypePrice;
 import com.uos.picobox.domain.price.repository.RoomTicketTypePriceRepository;
 import com.uos.picobox.domain.reservation.dto.*;
 import com.uos.picobox.domain.reservation.entity.*;
-import com.uos.picobox.domain.reservation.repository.PaymentRepository;
+import com.uos.picobox.domain.payment.repository.PaymentRepository;
 import com.uos.picobox.domain.reservation.repository.ReservationRepository;
 import com.uos.picobox.domain.screening.entity.Screening;
 import com.uos.picobox.domain.screening.entity.ScreeningSeat;
 import com.uos.picobox.domain.screening.entity.SeatStatus;
 import com.uos.picobox.domain.screening.repository.ScreeningRepository;
 import com.uos.picobox.domain.screening.repository.ScreeningSeatRepository;
+import com.uos.picobox.global.enumClass.TicketStatus;
 import com.uos.picobox.user.entity.Customer;
 import com.uos.picobox.user.entity.Guest;
 import com.uos.picobox.user.repository.CustomerRepository;
@@ -131,7 +135,7 @@ public class ReservationService {
 
     /**
      * 결제 대기 상태의 예매를 생성합니다.
-     * 선점된 좌석들을 바탕으로 예매를 생성하고, 사용된 포인트만큼 고객의 포인트를 차감합니다.
+     * 선점된 좌석들을 바탕으로 예매를 생성하고, 사용된 포인트만큼 고객의 포인트를 차감합니다. -> 결제로 이동.
      * 실제 결제는 별도의 completeReservation 메소드를 통해 완료됩니다.
      * 
      * @param dto 예매 정보 (상영 ID, 티켓 정보, 사용 포인트)
@@ -187,18 +191,11 @@ public class ReservationService {
             ).orElseThrow(() -> new EntityNotFoundException("해당 티켓 종류의 가격 정보를 찾을 수 없습니다."));
             totalAmount += priceInfo.getPrice() * ticketTypeInfo.getCount();
         }
-
-        // 포인트 사용 (회원만 가능)
         Customer customer = null;
         if ("customer".equals(userType)) {
             customer = customerRepository.findById(userId)
                     .orElseThrow(() -> new EntityNotFoundException("고객 정보를 찾을 수 없습니다: " + userId));
-            customer.usePoints(dto.getUsedPoints());
-        } else if (dto.getUsedPoints() > 0) {
-            throw new IllegalArgumentException("게스트는 포인트를 사용할 수 없습니다.");
         }
-        
-        int finalAmount = totalAmount - dto.getUsedPoints();
 
         // 예매 생성 (회원/게스트 구분)
         Reservation reservation;
@@ -249,20 +246,14 @@ public class ReservationService {
             }
         }
 
-        if (dto.getUsedPoints() > 0 && "customer".equals(userType)) {
-            PointHistory pointHistory = PointHistory.builder()
-                    .customer(customer)
-                    .changeType(PointChangeType.USED)
-                    .amount(dto.getUsedPoints())
-                    .relatedReservationId(reservation.getId())
-                    .build();
-            pointHistoryRepository.save(pointHistory);
-        }
-
         reservationRepository.save(reservation);
         log.info("결제 대기 상태의 예매 생성 완료: reservationId={}, 총 인원: {}명", reservation.getId(), totalPersonCount);
 
-        return new ReservationResponseDto(reservation, dto.getUsedPoints(), finalAmount, screening.getMovie().getTitle(), seatNumbers);
+        return ReservationResponseDto.builder()
+                .reservation(reservation)
+                .movieTitle(screening.getMovie().getTitle())
+                .seatNumbers(seatNumbers)
+                .build();
     }
 
     /**
@@ -270,20 +261,20 @@ public class ReservationService {
      * 예매 상태를 COMPLETED로 변경하고, 좌석을 SOLD 상태로 변경하며,
      * 결제 정보를 저장하고 포인트 적립을 처리합니다.
      * 
-     * @param dto 결제 정보 (예매 ID, 주문 ID, 결제 키, 결제 방법 등)
+     * @param reservationId 예매 ID
      * @param userInfo 사용자 인증 정보
      * @throws IllegalArgumentException 예약자 정보가 일치하지 않는 경우
      * @throws IllegalStateException 이미 처리되었거나 취소된 예약인 경우
      * @throws EntityNotFoundException 예약 정보를 찾을 수 없는 경우
      */
     @Transactional
-    public void completeReservation(PaymentRequestDto dto, Map<String, Object> userInfo) {
+    public void completeReservation(Long reservationId, Map<String, Object> userInfo) {
         String userType = (String) userInfo.get("type");
         Long userId = (Long) userInfo.get("id");
         
-        log.info("결제 완료 처리 시작: reservationId={}", dto.getReservationId());
-        Reservation reservation = reservationRepository.findById(dto.getReservationId())
-                .orElseThrow(() -> new EntityNotFoundException("예약 정보를 찾을 수 없습니다: " + dto.getReservationId()));
+        log.info("결제 완료 처리 시작: reservationId={}", reservationId);
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new EntityNotFoundException("예약 정보를 찾을 수 없습니다: " + reservationId));
 
         // 예약자 정보 확인 (회원/게스트 구분)
         boolean isOwner = false;
@@ -312,43 +303,7 @@ public class ReservationService {
             screeningSeat.setHoldExpiresAt(null);
         }
 
-        // 사용된 포인트 계산
-        int usedPoints = dto.getUsedPointAmount() != null ? dto.getUsedPointAmount() : 0;
-        int finalAmount = reservation.getTotalAmount() - usedPoints;
-
-        // 포인트 적립 (회원만, 결제 금액의 10%)
-        if ("customer".equals(userType)) {
-            int earnedPoints = (int) (finalAmount * 0.1);
-            if (earnedPoints > 0) {
-                Customer customer = reservation.getCustomer();
-                customer.addPoints(earnedPoints);
-                PointHistory pointHistory = PointHistory.builder()
-                        .customer(customer)
-                        .changeType(PointChangeType.EARNED)
-                        .amount(earnedPoints)
-                        .relatedReservationId(reservation.getId())
-                        .build();
-                pointHistoryRepository.save(pointHistory);
-            }
-        }
-
-        // 결제 정보 생성
-        Payment payment = Payment.builder()
-                .reservation(reservation)
-                .orderId(dto.getOrderId())
-                .paymentKey(dto.getPaymentKey())
-                .paymentMethod(dto.getPaymentMethod())
-                .paymentStatus("DONE")
-                .currency("KRW")
-                .paymentDiscountId(null)
-                .amount(reservation.getTotalAmount())
-                .usedPointAmount(usedPoints)
-                .finalAmount(finalAmount)
-                .approvedAt(LocalDateTime.now())
-                .build();
-        paymentRepository.save(payment);
-
-        log.info("결제 완료 처리 성공: reservationId={}", reservation.getId());
+        log.info("예매 완료 처리 성공: reservationId={}", reservation.getId());
     }
 
     /**
@@ -501,7 +456,7 @@ public class ReservationService {
         Payment payment = reservation.getPayment();
         int usedPoints = payment != null ? payment.getUsedPointAmount() : 0;
         int finalAmount = reservation.getTotalAmount() - usedPoints;
-        String paymentMethod = payment != null ? payment.getPaymentMethod() : "정보없음";
+        String paymentMethod = payment != null ? payment.getPaymentMethod().getValue() : "정보없음";
         LocalDateTime paymentCompletedAt = payment != null ? payment.getApprovedAt() : null;
         
         return new ReservationDetailResponseDto(

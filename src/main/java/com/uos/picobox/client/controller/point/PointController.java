@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@Tag(name = "06. 포인트 내역 조회", description = "포인트 내역을 조회합니다.")
+@Tag(name = "06. 회원 - 포인트 내역 조회", description = "포인트 내역을 조회합니다.")
 @RestController
 @RequestMapping("/api/protected/get")
 @RequiredArgsConstructor

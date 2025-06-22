@@ -1,6 +1,6 @@
-package com.uos.picobox.domain.reservation.entity;
+package com.uos.picobox.global.enumClass;
 
-public enum PaymentStatus {
+public enum PaymentStatus implements BaseEnum {
     // RESERVATION 테이블용
     PENDING,
     COMPLETED,
@@ -14,7 +14,11 @@ public enum PaymentStatus {
     IN_PROGRESS,
     PARTIAL_CANCELED,
     READY,
-    WAITING_FOR_DEPOSIT;
+    WAITING_FOR_DEPOSIT,
+    REFUNDED;
+
+    @Override
+    public String getValue() { return name(); }
 
     // 상태 확인 메서드들
     public boolean isCompleted() {
