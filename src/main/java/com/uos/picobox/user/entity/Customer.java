@@ -1,6 +1,8 @@
 package com.uos.picobox.user.entity;
 
 import com.uos.picobox.global.converter.BooleanToYNConverter;
+import com.uos.picobox.global.converter.GenderConverter;
+import com.uos.picobox.global.enumClass.Gender;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDate;
@@ -9,6 +11,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "CUSTOMER")
 @Getter
+@Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Customer {
 
@@ -36,7 +39,8 @@ public class Customer {
     private LocalDate dateOfBirth;
 
     @Column(name = "GENDER", length = 10)
-    private String gender;
+    @Convert(converter = GenderConverter.class)
+    private Gender gender;
 
     @Column(name = "POINTS", nullable = false)
     private Integer points;
@@ -52,7 +56,7 @@ public class Customer {
     private Boolean isActive;
 
     @Builder
-    public Customer(String loginId, String password, String name, String email, String phone, LocalDate dateOfBirth, String gender) {
+    public Customer(String loginId, String password, String name, String email, String phone, LocalDate dateOfBirth, Gender gender) {
         this.loginId = loginId;
         this.password = password;
         this.name = name;

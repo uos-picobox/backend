@@ -1,5 +1,6 @@
 package com.uos.picobox.user.dto;
 
+import com.uos.picobox.global.enumClass.Gender;
 import com.uos.picobox.user.entity.Customer;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -52,8 +53,8 @@ public class SignupRequestDto {
     @Schema(description = "생년월일", example = "1990-01-01", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     private LocalDate dateOfBirth;
 
-    @Schema(description = "성별", example = "Male", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
-    private String gender;
+    @Schema(description = "성별", example = "MALE", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+    private Gender gender;
 
     public Customer toEntity(String encodedPassword) {
         return Customer.builder()
