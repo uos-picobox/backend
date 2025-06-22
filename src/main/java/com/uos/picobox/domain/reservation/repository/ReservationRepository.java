@@ -56,4 +56,22 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
            "WHERE r.id = :reservationId AND r.guest.id = :guestId")
     Optional<Reservation> findByIdAndGuestIdWithDetails(@Param("reservationId") Long reservationId,
                                                         @Param("guestId") Long guestId);
+
+    /**
+     * 특정 영화의 총 예매 관객 수 조회
+     */
+    @Query("SELECT COUNT(t) FROM Reservation r " +
+           "JOIN r.tickets t " +
+           "JOIN Screening s ON r.screeningId = s.id " +
+           "WHERE s.movie.id = :movieId " +
+           "AND r.paymentStatus = 'COMPLETED'")
+    Long countReservedAudienceByMovieId(@Param("movieId") Long movieId);
+
+    /**
+     * 전체 영화의 총 예매 관객 수 조회
+     */
+    @Query("SELECT COUNT(t) FROM Reservation r " +
+           "JOIN r.tickets t " +
+           "WHERE r.paymentStatus = 'COMPLETED'")
+    Long countTotalReservedAudience();
 }
