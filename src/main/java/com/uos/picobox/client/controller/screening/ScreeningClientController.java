@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.util.List;
 
-@Tag(name = "03. 사용자 - 상영 스케줄 조회", description = "사용자 대상 상영 스케줄 조회 API")
+@Tag(name = "04. 사용자 - 상영 스케줄 조회", description = "사용자 대상 상영 스케줄 조회 API")
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
