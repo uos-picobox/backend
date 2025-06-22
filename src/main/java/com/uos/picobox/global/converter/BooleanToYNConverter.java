@@ -3,7 +3,7 @@ package com.uos.picobox.global.converter;
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
 
-@Converter
+@Converter(autoApply = true)
 public class BooleanToYNConverter implements AttributeConverter<Boolean, String> {
 
     @Override

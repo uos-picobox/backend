@@ -6,7 +6,6 @@ import com.uos.picobox.domain.reservation.dto.ReservationResponseDto;
 import com.uos.picobox.domain.reservation.dto.SeatRequestDto;
 import com.uos.picobox.domain.reservation.service.ReservationService;
 import com.uos.picobox.global.utils.SessionUtils;
-import com.uos.picobox.user.service.FindIdSevice;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -21,7 +20,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @Tag(name = "04. 회원 - 티켓 예매", description = "좌석 선택, 예매, 결제 완료 처리 API")
 @RestController
@@ -31,7 +29,6 @@ public class ReservationController {
 
     private final ReservationService reservationService;
     private final SessionUtils sessionUtils;
-    private final FindIdSevice findIdSevice;
 
     @Operation(summary = "좌석 선점 (HOLD)", description = "사용자가 선택한 좌석을 10분간 선점합니다.", security = @SecurityRequirement(name = "sessionAuth"))
     @ApiResponses(value = {
@@ -45,7 +42,7 @@ public class ReservationController {
             @Valid @RequestBody SeatRequestDto dto,
             @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId,
             Authentication authentication) {
-        Long id = findIdByAuthentication(authentication);
+        Long id = sessionUtils.findIdByAuthentication(authentication);
         reservationService.holdSeats(dto, id);
         return ResponseEntity.ok().build();
     }
@@ -61,7 +58,7 @@ public class ReservationController {
             @Valid @RequestBody SeatRequestDto dto,
             @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId,
             Authentication authentication) {
-        Long id = findIdByAuthentication(authentication);
+        Long id = sessionUtils.findIdByAuthentication(authentication);
         reservationService.releaseSeats(dto, id);
         return ResponseEntity.ok().build();
     }
@@ -78,7 +75,7 @@ public class ReservationController {
             @Valid @RequestBody ReservationRequestDto dto,
             @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId,
             Authentication authentication) {
-        Long id = findIdByAuthentication(authentication);
+        Long id = sessionUtils.findIdByAuthentication(authentication);
         ReservationResponseDto responseDto = reservationService.createPendingReservation(dto, id);
         return ResponseEntity.status(HttpStatus.CREATED).body(responseDto);
     }
@@ -95,7 +92,7 @@ public class ReservationController {
             @Valid @RequestBody PaymentRequestDto dto,
             @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId,
             Authentication authentication) {
-        Long id = findIdByAuthentication(authentication);
+        Long id = sessionUtils.findIdByAuthentication(authentication);
         reservationService.completeReservation(dto, id);
         return ResponseEntity.ok().build();
     }
@@ -109,27 +106,8 @@ public class ReservationController {
     public ResponseEntity<List<ReservationResponseDto>> getMyReservations(
             @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId,
             Authentication authentication) {
-        Long id = findIdByAuthentication(authentication);
+        Long id = sessionUtils.findIdByAuthentication(authentication);
         List<ReservationResponseDto> reservations = reservationService.getReservationsByCustomerId(id);
         return ResponseEntity.ok(reservations);
-    }
-
-    private Long findIdByAuthentication(Authentication authentication) {
-        String value = (String) authentication.getPrincipal();
-        Map<String, String> sessionInfo = sessionUtils.splitSessionValue(value);
-        String type = sessionInfo.get("type");
-        Long id;
-        if (type.equals("customer")) {
-            String loginId = sessionInfo.get("value");
-            id = findIdSevice.findCustomerIdByLoginId(loginId);
-        }
-        else if (type.equals("guest")) {
-            String email = sessionInfo.get("value");
-            id = findIdSevice.findGuestIdByEmail(email);
-        }
-        else {
-            throw new IllegalArgumentException("잘못된 session 정보입니다.");
-        }
-        return id;
     }
 }

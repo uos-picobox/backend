@@ -5,9 +5,11 @@ import io.lettuce.core.dynamic.annotation.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 
+@Repository
 public interface GuestRepository extends JpaRepository<Guest, Long> {
     boolean existsByEmail(String email);
     @Query("SELECT g.password FROM Guest g WHERE g.email = :email")
