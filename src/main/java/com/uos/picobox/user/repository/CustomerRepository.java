@@ -12,6 +12,6 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
     boolean existsByEmail(String email);
     @Query("SELECT c.password FROM Customer c WHERE c.loginId = :loginId")
     String findPasswordByLoginId(@Param("loginId") String loginId);
-    
-    Optional<Customer> findByLoginId(String loginId);
+    @Query("SELECT c.id FROM Customer c WHERE c.loginId = :loginId")
+    Long findIdByLoginId(@Param("loginId") String loginId);
 }

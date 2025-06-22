@@ -5,7 +5,8 @@ import com.uos.picobox.domain.reservation.dto.ReservationRequestDto;
 import com.uos.picobox.domain.reservation.dto.ReservationResponseDto;
 import com.uos.picobox.domain.reservation.dto.SeatRequestDto;
 import com.uos.picobox.domain.reservation.service.ReservationService;
-import com.uos.picobox.global.utils.SessionUtil;
+import com.uos.picobox.global.utils.SessionUtils;
+import com.uos.picobox.user.service.FindIdSevice;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -16,18 +17,21 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
-@Tag(name = "05. 사용자 - 티켓 예매", description = "좌석 선택, 예매, 결제 완료 처리 API")
+@Tag(name = "04. 회원 - 티켓 예매", description = "좌석 선택, 예매, 결제 완료 처리 API")
 @RestController
-@RequestMapping("/api/reservations")
+@RequestMapping("/api/protected/reservations")
 @RequiredArgsConstructor
 public class ReservationController {
 
     private final ReservationService reservationService;
-    private final SessionUtil sessionUtil;
+    private final SessionUtils sessionUtils;
+    private final FindIdSevice findIdSevice;
 
     @Operation(summary = "좌석 선점 (HOLD)", description = "사용자가 선택한 좌석을 10분간 선점합니다.", security = @SecurityRequirement(name = "sessionAuth"))
     @ApiResponses(value = {
@@ -39,9 +43,10 @@ public class ReservationController {
     @PostMapping("/hold")
     public ResponseEntity<Void> holdSeats(
             @Valid @RequestBody SeatRequestDto dto,
-            @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId) {
-        Long customerId = sessionUtil.getCustomerIdFromSession(sessionId);
-        reservationService.holdSeats(dto, customerId);
+            @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId,
+            Authentication authentication) {
+        Long id = findIdByAuthentication(authentication);
+        reservationService.holdSeats(dto, id);
         return ResponseEntity.ok().build();
     }
 
@@ -54,9 +59,10 @@ public class ReservationController {
     @PostMapping("/release")
     public ResponseEntity<Void> releaseSeats(
             @Valid @RequestBody SeatRequestDto dto,
-            @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId) {
-        Long customerId = sessionUtil.getCustomerIdFromSession(sessionId);
-        reservationService.releaseSeats(dto, customerId);
+            @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId,
+            Authentication authentication) {
+        Long id = findIdByAuthentication(authentication);
+        reservationService.releaseSeats(dto, id);
         return ResponseEntity.ok().build();
     }
 
@@ -70,9 +76,10 @@ public class ReservationController {
     @PostMapping("/create")
     public ResponseEntity<ReservationResponseDto> createPendingReservation(
             @Valid @RequestBody ReservationRequestDto dto,
-            @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId) {
-        Long customerId = sessionUtil.getCustomerIdFromSession(sessionId);
-        ReservationResponseDto responseDto = reservationService.createPendingReservation(dto, customerId);
+            @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId,
+            Authentication authentication) {
+        Long id = findIdByAuthentication(authentication);
+        ReservationResponseDto responseDto = reservationService.createPendingReservation(dto, id);
         return ResponseEntity.status(HttpStatus.CREATED).body(responseDto);
     }
 
@@ -86,9 +93,10 @@ public class ReservationController {
     @PostMapping("/complete")
     public ResponseEntity<Void> completeReservation(
             @Valid @RequestBody PaymentRequestDto dto,
-            @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId) {
-        Long customerId = sessionUtil.getCustomerIdFromSession(sessionId);
-        reservationService.completeReservation(dto, customerId);
+            @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId,
+            Authentication authentication) {
+        Long id = findIdByAuthentication(authentication);
+        reservationService.completeReservation(dto, id);
         return ResponseEntity.ok().build();
     }
 
@@ -99,9 +107,29 @@ public class ReservationController {
     })
     @GetMapping("/my-reservations")
     public ResponseEntity<List<ReservationResponseDto>> getMyReservations(
-            @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId) {
-        Long customerId = sessionUtil.getCustomerIdFromSession(sessionId);
-        List<ReservationResponseDto> reservations = reservationService.getReservationsByCustomerId(customerId);
+            @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId,
+            Authentication authentication) {
+        Long id = findIdByAuthentication(authentication);
+        List<ReservationResponseDto> reservations = reservationService.getReservationsByCustomerId(id);
         return ResponseEntity.ok(reservations);
+    }
+
+    private Long findIdByAuthentication(Authentication authentication) {
+        String value = (String) authentication.getPrincipal();
+        Map<String, String> sessionInfo = sessionUtils.splitSessionValue(value);
+        String type = sessionInfo.get("type");
+        Long id;
+        if (type.equals("customer")) {
+            String loginId = sessionInfo.get("value");
+            id = findIdSevice.findCustomerIdByLoginId(loginId);
+        }
+        else if (type.equals("guest")) {
+            String email = sessionInfo.get("value");
+            id = findIdSevice.findGuestIdByEmail(email);
+        }
+        else {
+            throw new IllegalArgumentException("잘못된 session 정보입니다.");
+        }
+        return id;
     }
 }

@@ -33,7 +33,7 @@ public class AdminSigninService {
             throw new IllegalArgumentException("잘못된 아이디 혹은 비밀번호입니다.");
         };
 
-        Map<String, String> sessionInfo = sessionUtils.createSession("adminSession", loginId);
+        Map<String, String> sessionInfo = sessionUtils.createSession("adminSession", "admin:" + loginId);
         String sessionId = sessionInfo.get("sessionId");
         String expiration = sessionInfo.get("expiration");
         return new SigninResponseDto(loginId, sessionId, expiration);

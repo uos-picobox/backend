@@ -1,6 +1,6 @@
 package com.uos.picobox.domain.reservation.service;
 
-import com.uos.picobox.domain.point.entity.PointChangeType;
+import com.uos.picobox.global.enumClass.PointChangeType;
 import com.uos.picobox.domain.point.entity.PointHistory;
 import com.uos.picobox.domain.point.repository.PointHistoryRepository;
 import com.uos.picobox.domain.price.entity.RoomTicketTypePrice;
