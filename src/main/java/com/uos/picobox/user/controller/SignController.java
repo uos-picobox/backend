@@ -17,8 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-@Tag(name = "회원 - 01. 로그인, 로그아웃", description = "회원 정보를 처리합니다.")
-
+@Tag(name = "00. 회원 - 로그인, 로그아웃", description = "회원 정보를 처리합니다.")
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor

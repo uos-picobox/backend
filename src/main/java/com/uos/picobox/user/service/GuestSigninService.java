@@ -33,7 +33,7 @@ public class GuestSigninService {
             throw new IllegalArgumentException("잘못된 이메일 혹은 비밀번호입니다.");
         };
 
-        Map<String, String> sessionInfo = sessionUtils.createSession("guestSession", email);
+        Map<String, String> sessionInfo = sessionUtils.createSession("userSession", "guest:" + email);
         String sessionId = sessionInfo.get("sessionId");
         String expiration = sessionInfo.get("expiration");
 

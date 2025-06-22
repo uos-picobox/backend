@@ -1,11 +1,8 @@
 package com.uos.picobox.client.controller.reservation;
 
-import com.uos.picobox.domain.reservation.dto.PaymentRequestDto;
-import com.uos.picobox.domain.reservation.dto.ReservationRequestDto;
-import com.uos.picobox.domain.reservation.dto.ReservationResponseDto;
-import com.uos.picobox.domain.reservation.dto.SeatRequestDto;
+import com.uos.picobox.domain.reservation.dto.*;
 import com.uos.picobox.domain.reservation.service.ReservationService;
-import com.uos.picobox.global.utils.SessionUtil;
+import com.uos.picobox.global.utils.SessionUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -16,18 +13,19 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@Tag(name = "05. 사용자 - 티켓 예매", description = "좌석 선택, 예매, 결제 완료 처리 API")
+@Tag(name = "05. 회원/게스트 - 티켓 예매", description = "좌석 선택, 예매, 결제 완료 처리 API (회원/게스트 모두 이용 가능)")
 @RestController
-@RequestMapping("/api/reservations")
+@RequestMapping("/api/protected/reservations")
 @RequiredArgsConstructor
 public class ReservationController {
 
     private final ReservationService reservationService;
-    private final SessionUtil sessionUtil;
+    private final SessionUtils sessionUtils;
 
     @Operation(summary = "좌석 선점 (HOLD)", description = "사용자가 선택한 좌석을 10분간 선점합니다.", security = @SecurityRequirement(name = "sessionAuth"))
     @ApiResponses(value = {
@@ -39,9 +37,9 @@ public class ReservationController {
     @PostMapping("/hold")
     public ResponseEntity<Void> holdSeats(
             @Valid @RequestBody SeatRequestDto dto,
-            @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId) {
-        Long customerId = sessionUtil.getCustomerIdFromSession(sessionId);
-        reservationService.holdSeats(dto, customerId);
+            @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId,
+            Authentication authentication) {
+        reservationService.holdSeats(dto, authentication);
         return ResponseEntity.ok().build();
     }
 
@@ -54,9 +52,9 @@ public class ReservationController {
     @PostMapping("/release")
     public ResponseEntity<Void> releaseSeats(
             @Valid @RequestBody SeatRequestDto dto,
-            @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId) {
-        Long customerId = sessionUtil.getCustomerIdFromSession(sessionId);
-        reservationService.releaseSeats(dto, customerId);
+            @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId,
+            Authentication authentication) {
+        reservationService.releaseSeats(dto, authentication);
         return ResponseEntity.ok().build();
     }
 
@@ -70,9 +68,9 @@ public class ReservationController {
     @PostMapping("/create")
     public ResponseEntity<ReservationResponseDto> createPendingReservation(
             @Valid @RequestBody ReservationRequestDto dto,
-            @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId) {
-        Long customerId = sessionUtil.getCustomerIdFromSession(sessionId);
-        ReservationResponseDto responseDto = reservationService.createPendingReservation(dto, customerId);
+            @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId,
+            Authentication authentication) {
+        ReservationResponseDto responseDto = reservationService.createPendingReservation(dto, authentication);
         return ResponseEntity.status(HttpStatus.CREATED).body(responseDto);
     }
 
@@ -86,22 +84,52 @@ public class ReservationController {
     @PostMapping("/complete")
     public ResponseEntity<Void> completeReservation(
             @Valid @RequestBody PaymentRequestDto dto,
-            @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId) {
-        Long customerId = sessionUtil.getCustomerIdFromSession(sessionId);
-        reservationService.completeReservation(dto, customerId);
+            @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId,
+            Authentication authentication) {
+        reservationService.completeReservation(dto, authentication);
         return ResponseEntity.ok().build();
     }
 
-    @Operation(summary = "내 예매 내역 조회", description = "현재 로그인한 사용자의 예매 내역을 조회합니다.", security = @SecurityRequirement(name = "sessionAuth"))
+    @Operation(summary = "내 예매 내역 조회", description = "현재 로그인한 사용자의 예매 내역을 조회합니다. 과거/현재 구분되며 상영일 기준으로 정렬됩니다.", security = @SecurityRequirement(name = "sessionAuth"))
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "예매 내역 조회 성공"),
             @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자")
     })
     @GetMapping("/my-reservations")
-    public ResponseEntity<List<ReservationResponseDto>> getMyReservations(
-            @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId) {
-        Long customerId = sessionUtil.getCustomerIdFromSession(sessionId);
-        List<ReservationResponseDto> reservations = reservationService.getReservationsByCustomerId(customerId);
+    public ResponseEntity<List<ReservationListResponseDto>> getMyReservations(
+            @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId,
+            Authentication authentication) {
+        List<ReservationListResponseDto> reservations = reservationService.getReservationList(authentication);
         return ResponseEntity.ok(reservations);
+    }
+
+    @Operation(summary = "예매 상세 정보 조회", description = "특정 예매의 상세 정보를 조회합니다.", security = @SecurityRequirement(name = "sessionAuth"))
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "예매 상세 정보 조회 성공"),
+            @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자"),
+            @ApiResponse(responseCode = "404", description = "존재하지 않는 예매")
+    })
+    @GetMapping("/{reservationId}")
+    public ResponseEntity<ReservationDetailResponseDto> getReservationDetail(
+            @Parameter(description = "예매 ID", required = true) @PathVariable Long reservationId,
+            @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId,
+            Authentication authentication) {
+        ReservationDetailResponseDto detail = reservationService.getReservationDetail(reservationId, authentication);
+        return ResponseEntity.ok(detail);
+    }
+
+    @Operation(summary = "모바일 티켓 조회", description = "예매에 대한 모바일 티켓 정보를 조회합니다.", security = @SecurityRequirement(name = "sessionAuth"))
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "티켓 정보 조회 성공"),
+            @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자"),
+            @ApiResponse(responseCode = "404", description = "존재하지 않는 예매")
+    })
+    @GetMapping("/{reservationId}/ticket")
+    public ResponseEntity<TicketResponseDto> getTicket(
+            @Parameter(description = "예매 ID", required = true) @PathVariable Long reservationId,
+            @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId,
+            Authentication authentication) {
+        TicketResponseDto ticket = reservationService.getTicket(reservationId, authentication);
+        return ResponseEntity.ok(ticket);
     }
 }

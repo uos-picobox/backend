@@ -35,7 +35,7 @@ public class GuestSignupService {
         Guest guest = guestSignupRequestDto.toEntity(encodedPassword, expirationDate);
         guest = guestRepository.save(guest);
 
-        Map<String, String> sessionInfo = sessionUtils.createSession("guestSession", guest.getEmail());
+        Map<String, String> sessionInfo = sessionUtils.createSession("userSession", "guest:" + guest.getEmail());
         String sessionId = sessionInfo.get("sessionId");
         String expiration = sessionInfo.get("expiration");
 

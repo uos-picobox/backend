@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.HashMap;
 import java.util.Map;
 
-@Tag(name = "00. 헬스 체크", description = "애플리케이션의 상태를 확인하는 API")
+@Tag(name = "헬스 체크", description = "애플리케이션의 상태를 확인하는 API")
 @RestController
 public class HealthController {
 

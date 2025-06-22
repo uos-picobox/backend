@@ -4,7 +4,7 @@ import com.uos.picobox.domain.review.dto.ReviewRequestDto;
 import com.uos.picobox.domain.review.dto.ReviewResponseDto;
 import com.uos.picobox.domain.review.dto.ReviewSummaryDto;
 import com.uos.picobox.domain.review.service.ReviewService;
-import com.uos.picobox.global.utils.SessionUtil;
+import com.uos.picobox.global.utils.SessionUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -14,18 +14,19 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
-@Tag(name = "06. 사용자 - 리뷰 관리", description = "영화 리뷰 작성, 조회, 수정, 삭제 및 좋아요 기능")
+@Tag(name = "05. 사용자 - 리뷰 관리", description = "영화 리뷰 작성, 조회, 수정, 삭제 및 좋아요 기능")
 @RestController
-@RequestMapping("/api/reviews")
+@RequestMapping("/api/protected/reviews")
 @RequiredArgsConstructor
 public class ReviewController {
 
     private final ReviewService reviewService;
-    private final SessionUtil sessionUtil;
+    private final SessionUtils sessionUtils;
 
     @Operation(summary = "리뷰 작성", description = "관람 완료한 영화에 대해 리뷰를 작성합니다.")
     @ApiResponses(value = {
@@ -37,10 +38,10 @@ public class ReviewController {
     @PostMapping
     public ResponseEntity<ReviewResponseDto> createReview(
             @Valid @RequestBody ReviewRequestDto dto,
-            @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId) {
-        
-        Long customerId = sessionUtil.getCustomerIdFromSession(sessionId);
-        ReviewResponseDto review = reviewService.createReview(dto, customerId);
+            @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId,
+            Authentication authentication) {
+        Long id = sessionUtils.findCustomerIdByAuthentication(authentication);
+        ReviewResponseDto review = reviewService.createReview(dto, id);
         return ResponseEntity.status(201).body(review);
     }
 
@@ -56,10 +57,10 @@ public class ReviewController {
     public ResponseEntity<ReviewResponseDto> updateReview(
             @PathVariable Long reviewId,
             @Valid @RequestBody ReviewRequestDto dto,
-            @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId) {
-        
-        Long customerId = sessionUtil.getCustomerIdFromSession(sessionId);
-        ReviewResponseDto review = reviewService.updateReview(reviewId, dto, customerId);
+            @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId,
+            Authentication authentication) {
+        Long id = sessionUtils.findCustomerIdByAuthentication(authentication);
+        ReviewResponseDto review = reviewService.updateReview(reviewId, dto, id);
         return ResponseEntity.ok(review);
     }
 
@@ -73,10 +74,10 @@ public class ReviewController {
     @DeleteMapping("/{reviewId}")
     public ResponseEntity<Void> deleteReview(
             @PathVariable Long reviewId,
-            @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId) {
-        
-        Long customerId = sessionUtil.getCustomerIdFromSession(sessionId);
-        reviewService.deleteReview(reviewId, customerId);
+            @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId,
+            Authentication authentication) {
+        Long id = sessionUtils.findCustomerIdByAuthentication(authentication);
+        reviewService.deleteReview(reviewId, id);
         return ResponseEntity.noContent().build();
     }
 
@@ -94,18 +95,10 @@ public class ReviewController {
             @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "페이지 크기", example = "10")
             @RequestParam(defaultValue = "10") int size,
-            @Parameter(hidden = true) @RequestHeader(value = "Authorization", required = false) String sessionId) {
-        
-        Long currentUserId = null;
-        if (sessionId != null) {
-            try {
-                currentUserId = sessionUtil.getCustomerIdFromSession(sessionId);
-            } catch (Exception e) {
-                // 세션이 유효하지 않으면 null로 처리 (비로그인 사용자)
-            }
-        }
-        
-        Page<ReviewResponseDto> reviews = reviewService.getReviewsByMovie(movieId, sortBy, page, size, currentUserId);
+            @Parameter(hidden = true) @RequestHeader(value = "Authorization", required = false) String sessionId,
+            Authentication authentication) {
+        Long id = sessionUtils.findCustomerIdByAuthentication(authentication);
+        Page<ReviewResponseDto> reviews = reviewService.getReviewsByMovie(movieId, sortBy, page, size, id);
         
         if (reviews.isEmpty()) {
             return ResponseEntity.noContent().build();
@@ -129,10 +122,10 @@ public class ReviewController {
     @PostMapping("/{reviewId}/like")
     public ResponseEntity<Map<String, Object>> toggleReviewLike(
             @PathVariable Long reviewId,
-            @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId) {
-        
-        Long customerId = sessionUtil.getCustomerIdFromSession(sessionId);
-        boolean isLiked = reviewService.toggleReviewLike(reviewId, customerId);
+            @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId,
+            Authentication authentication) {
+        Long id = sessionUtils.findCustomerIdByAuthentication(authentication);
+        boolean isLiked = reviewService.toggleReviewLike(reviewId, id);
         
         return ResponseEntity.ok(Map.of(
                 "isLiked", isLiked,
@@ -147,10 +140,10 @@ public class ReviewController {
             @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "페이지 크기", example = "10")
             @RequestParam(defaultValue = "10") int size,
-            @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId) {
-        
-        Long customerId = sessionUtil.getCustomerIdFromSession(sessionId);
-        Page<ReviewResponseDto> reviews = reviewService.getMyReviews(customerId, page, size);
+            @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId,
+            Authentication authentication) {
+        Long id = sessionUtils.findCustomerIdByAuthentication(authentication);
+        Page<ReviewResponseDto> reviews = reviewService.getMyReviews(id, page, size);
         
         if (reviews.isEmpty()) {
             return ResponseEntity.noContent().build();
