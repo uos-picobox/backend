@@ -14,7 +14,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-@Tag(name = "03. 사용자 - 배우 정보 조회", description = "사용자자용 배우 관련 API")
+@Tag(name = "03. 회원 - 배우 정보 조회", description = "사용자자용 배우 관련 API")
 @RestController
 @RequestMapping("/api/actors")
 @RequiredArgsConstructor

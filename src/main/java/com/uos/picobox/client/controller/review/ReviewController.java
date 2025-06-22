@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
-@Tag(name = "05. 사용자 - 리뷰 관리", description = "영화 리뷰 작성, 조회, 수정, 삭제 및 좋아요 기능")
+@Tag(name = "05. 회원 - 리뷰 관리", description = "영화 리뷰 작성, 조회, 수정, 삭제 및 좋아요 기능")
 @RestController
 @RequestMapping("/api/protected/reviews")
 @RequiredArgsConstructor

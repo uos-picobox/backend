@@ -3,6 +3,7 @@ package com.uos.picobox.domain.reservation.dto;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.uos.picobox.domain.reservation.entity.Reservation;
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Builder;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
@@ -37,6 +38,7 @@ public class ReservationResponseDto {
     @Schema(description = "선택한 좌석 목록")
     private final List<String> seatNumbers; // 필요에 따라 추가
 
+    @Builder
     public ReservationResponseDto(Reservation reservation, int usedPoints, int finalAmount, String movieTitle, List<String> seatNumbers) {
         this.reservationId = reservation.getId();
         this.paymentStatus = reservation.getPaymentStatus().name();

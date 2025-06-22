@@ -1,14 +1,16 @@
 package com.uos.picobox.domain.reservation.repository;
 
-import com.uos.picobox.domain.reservation.entity.PaymentStatus;
+import com.uos.picobox.global.enumClass.PaymentStatus;
 import com.uos.picobox.domain.reservation.entity.Reservation;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
 
+@Repository
 public interface ReservationRepository extends JpaRepository<Reservation, Long> {
     List<Reservation> findByCustomerIdOrderByReservationDateDesc(Long customerId);
     List<Reservation> findByGuestIdOrderByReservationDateDesc(Long guestId);
@@ -22,7 +24,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
            "WHERE r.customer.id = :customerId " +
            "AND r.paymentStatus = :status " +
            "ORDER BY r.id DESC")
-    List<Reservation> findByCustomerIdAndPaymentStatusOrderByIdDesc(@Param("customerId") Long customerId, 
+    List<Reservation> findByCustomerIdAndPaymentStatusOrderByIdDesc(@Param("customerId") Long customerId,
                                                                     @Param("status") PaymentStatus status);
 
     /**
@@ -32,7 +34,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
            "WHERE r.guest.id = :guestId " +
            "AND r.paymentStatus = :status " +
            "ORDER BY r.id DESC")
-    List<Reservation> findByGuestIdAndPaymentStatusOrderByIdDesc(@Param("guestId") Long guestId, 
+    List<Reservation> findByGuestIdAndPaymentStatusOrderByIdDesc(@Param("guestId") Long guestId,
                                                                  @Param("status") PaymentStatus status);
 
     /**
@@ -42,7 +44,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
            "LEFT JOIN FETCH r.tickets t " +
            "LEFT JOIN FETCH r.payment p " +
            "WHERE r.id = :reservationId AND r.customer.id = :customerId")
-    Optional<Reservation> findByIdAndCustomerIdWithDetails(@Param("reservationId") Long reservationId, 
+    Optional<Reservation> findByIdAndCustomerIdWithDetails(@Param("reservationId") Long reservationId,
                                                           @Param("customerId") Long customerId);
 
     /**
@@ -52,7 +54,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
            "LEFT JOIN FETCH r.tickets t " +
            "LEFT JOIN FETCH r.payment p " +
            "WHERE r.id = :reservationId AND r.guest.id = :guestId")
-    Optional<Reservation> findByIdAndGuestIdWithDetails(@Param("reservationId") Long reservationId, 
+    Optional<Reservation> findByIdAndGuestIdWithDetails(@Param("reservationId") Long reservationId,
                                                         @Param("guestId") Long guestId);
 
     /**

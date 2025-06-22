@@ -1,6 +1,6 @@
-package com.uos.picobox.domain.reservation.entity;
+package com.uos.picobox.global.enumClass;
 
-public enum PaymentMethod {
+public enum PaymentMethod implements BaseEnum {
     CARD,           // 카드
     VIRTUAL_ACCOUNT,// 가상계좌
     EASY_PAY,       // 간편결제
@@ -8,5 +8,8 @@ public enum PaymentMethod {
     TRANSFER,       // 계좌이체
     BOOK_GIFT,      // 도서문화상품권
     CULTURE_GIFT,   // 문화상품권
-    MOBILE          // 휴대폰
+    MOBILE;          // 휴대폰
+
+    @Override
+    public String getValue() { return name(); }
 } 

@@ -24,6 +24,7 @@ public class CacheConfig {
         caffeineConfigs.put("emailAuthCode", Caffeine.newBuilder().expireAfterWrite(5, TimeUnit.MINUTES));
         caffeineConfigs.put("userSession", Caffeine.newBuilder().expireAfterWrite(1, TimeUnit.HOURS));
         caffeineConfigs.put("adminSession", Caffeine.newBuilder().expireAfterWrite(6, TimeUnit.HOURS));
+        caffeineConfigs.put("payment", Caffeine.newBuilder().expireAfterWrite(30, TimeUnit.MINUTES));
 
         SimpleCacheManager cacheManager = new SimpleCacheManager();
         List<CaffeineCache> caches = caffeineConfigs.entrySet().stream()
