@@ -31,7 +31,7 @@ public class CustomerInfoService {
                 .orElseThrow(() -> new EntityNotFoundException("해당 회원 정보가 존재하지 않습니다."));
 
         if (dto.getLoginId() != null) {
-            if (!signupService.isLoginIdAvailable(dto.getLoginId())) {
+            if (!dto.getLoginId().equals(customer.getLoginId()) && !signupService.isLoginIdAvailable(dto.getLoginId())) {
                 throw new IllegalArgumentException("중복된 loginId 입니다.");
             }
             customer.setLoginId(dto.getLoginId());
@@ -40,7 +40,7 @@ public class CustomerInfoService {
             customer.setName(dto.getName());
         }
         if (dto.getEmail() != null) {
-            if (!signupService.isEmailAvailable(dto.getEmail())) {
+            if (!dto.getEmail().equals(customer.getEmail()) && !signupService.isEmailAvailable(dto.getEmail())) {
                 throw new IllegalArgumentException("중복된 email 입니다.");
             }
             customer.setEmail(dto.getEmail());
