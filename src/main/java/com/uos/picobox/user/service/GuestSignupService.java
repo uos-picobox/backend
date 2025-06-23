@@ -29,8 +29,8 @@ public class GuestSignupService {
         }
 
         String encodedPassword = passwordEncoder.encode(guestSignupRequestDto.getPassword());
-        // 6시간 후 만료로 설정 후 예매 시 상영 종료 시점까지 연장.
-        LocalDateTime expirationDate = LocalDateTime.now().plusHours(6);
+
+        LocalDateTime expirationDate = LocalDateTime.now().plusWeeks(1);
 
         Guest guest = guestSignupRequestDto.toEntity(encodedPassword, expirationDate);
         guest = guestRepository.save(guest);

@@ -17,11 +17,14 @@ import com.uos.picobox.global.enumClass.PaymentStatus;
 import com.uos.picobox.global.enumClass.PointChangeType;
 import com.uos.picobox.global.utils.PaymentUtils;
 import com.uos.picobox.user.entity.Customer;
+import com.uos.picobox.user.entity.Guest;
 import com.uos.picobox.user.repository.CustomerRepository;
+import com.uos.picobox.user.repository.GuestRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,6 +52,7 @@ public class PaymentService {
     private final CustomerRepository customerRepository;
     private final PointHistoryRepository pointHistoryRepository;
     private final PaymentUtils paymentUtils;
+    private final GuestRepository guestRepository;
     @Value("${TOSS_API_SECRET_KEY}")
     private String secretKey;
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -225,6 +229,58 @@ public class PaymentService {
             return ConfirmPaymentResponseDto.builder()
                     .payment(payment)
                     .build();
+        }
+    }
+    public ConfirmPaymentResponseDto[] findPaymentHistoryByUser(Map<String, Object> userInfo) {
+        String userType = (String) userInfo.get("type");
+        Long userId = (Long) userInfo.get("id");
+
+        if ("customer".equals(userType)) {
+            Customer customer = customerRepository.findById(userId).orElseThrow(() ->
+                    new EntityNotFoundException("회원 정보를 찾을 수 없습니다."));
+            List<Payment> paymentList = reservationRepository.findPaymentsByCustomer(customer);
+            List<ConfirmPaymentResponseDto> dto = paymentList.stream().map(payment -> {
+                Long paymentDiscountId = payment.getPaymentDiscountId();
+                if (paymentDiscountId != null) {
+                    PaymentDiscount paymentDiscount = paymentDiscountRepository.findById(paymentDiscountId).orElseThrow(()
+                    -> new EntityNotFoundException("할인 정보를 찾을 수 없습니다."));
+                    return ConfirmPaymentResponseDto.builder()
+                            .payment(payment)
+                            .paymentDiscountInfo(new PaymentDiscountResponseDto(paymentDiscount))
+                            .build();
+                }
+                else {
+                    return ConfirmPaymentResponseDto.builder()
+                            .payment(payment)
+                            .build();
+                }
+            }).toList();
+            return dto.toArray(new ConfirmPaymentResponseDto[0]);
+        }
+        else if ("guest".equals(userType)) {
+            Guest guest = guestRepository.findById(userId).orElseThrow(() ->
+                    new EntityNotFoundException("비회원 정보를 찾을 수 없습니다."));
+            List<Payment> paymentList = reservationRepository.findPaymentsByGuest(guest);
+            List<ConfirmPaymentResponseDto> dto = paymentList.stream().map(payment -> {
+                Long paymentDiscountId = payment.getPaymentDiscountId();
+                if (paymentDiscountId != null) {
+                    PaymentDiscount paymentDiscount = paymentDiscountRepository.findById(paymentDiscountId).orElseThrow(()
+                            -> new EntityNotFoundException("할인 정보를 찾을 수 없습니다."));
+                    return ConfirmPaymentResponseDto.builder()
+                            .payment(payment)
+                            .paymentDiscountInfo(new PaymentDiscountResponseDto(paymentDiscount))
+                            .build();
+                }
+                else {
+                    return ConfirmPaymentResponseDto.builder()
+                            .payment(payment)
+                            .build();
+                }
+            }).toList();
+            return dto.toArray(new ConfirmPaymentResponseDto[0]);
+        }
+        else {
+            throw new AccessDeniedException("회원, 비회원이 아닌 사용자는 결제 정보를 조회할 수 없습니다.");
         }
     }
 
