@@ -153,13 +153,13 @@ public class ReservationController {
             @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자"),
             @ApiResponse(responseCode = "404", description = "존재하지 않는 예매")
     })
-    @PostMapping("/{reservationId}/cancel")
+    @PostMapping("/cancel")
     public ResponseEntity<Void> cancelReservation(
-            @Parameter(description = "취소할 예매 ID", required = true) @PathVariable Long reservationId,
+            @Valid @RequestBody CancelReservationRequestDto dto,
             @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId,
             Authentication authentication) {
         Map<String, Object> sessionInfo = sessionUtils.findSessionInfoByAuthentication(authentication);
-        reservationService.cancelReservation(reservationId, sessionInfo);
+        reservationService.cancelReservation(dto, sessionInfo);
         return ResponseEntity.ok().build();
     }
 }
