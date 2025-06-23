@@ -82,4 +82,21 @@ public class PaymentController {
         ConfirmPaymentResponseDto response = paymentService.findPaymentHistoryByReservationId(reservationId);
         return ResponseEntity.ok(response);
     }
+
+    @Operation(summary = "내 결제 내역 조회", description = "자신의 모든 결제 내역을 조회합니다.", security = @SecurityRequirement(name = "sessionAuth"))
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "내 결제 내역 조회에 성공했습니다."),
+            @ApiResponse(responseCode = "400", description = "잘못된 요청"),
+            @ApiResponse(responseCode = "401", description = "인증 필요"),
+            @ApiResponse(responseCode = "404", description = "예매 정보 없음")
+    })
+    @GetMapping("/get/all")
+    public ResponseEntity<?> findPaymentInfosByUser(
+            @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId,
+            Authentication authentication
+    ) {
+        Map<String, Object> sessionInfo = sessionUtils.findSessionInfoByAuthentication(authentication);
+        ConfirmPaymentResponseDto[] response = paymentService.findPaymentHistoryByUser(sessionInfo);
+        return ResponseEntity.ok(response);
+    }
 }

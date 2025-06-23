@@ -1,7 +1,10 @@
 package com.uos.picobox.domain.reservation.repository;
 
+import com.uos.picobox.domain.payment.entity.Payment;
 import com.uos.picobox.domain.reservation.entity.Reservation;
 import com.uos.picobox.global.enumClass.ReservationStatus;
+import com.uos.picobox.user.entity.Customer;
+import com.uos.picobox.user.entity.Guest;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 import org.springframework.data.jpa.repository.Query;
@@ -101,4 +104,9 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     @Query("SELECT r.id FROM Reservation r WHERE r.reservationStatus = 'COMPLETED' AND r.customer IS NOT NULL")
     List<Long> findCompletedReservationIds();
 
+    @Query("SELECT r.payment FROM Reservation r WHERE r.customer = :customer")
+    List<Payment> findPaymentsByCustomer(@Param("customer") Customer customer);
+
+    @Query("SELECT r.payment FROM Reservation r WHERE r.guest = :guest")
+    List<Payment> findPaymentsByGuest(@Param("guest") Guest guest);
 }
