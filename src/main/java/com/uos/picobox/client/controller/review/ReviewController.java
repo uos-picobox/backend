@@ -81,37 +81,7 @@ public class ReviewController {
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "영화별 리뷰 목록 조회", description = "특정 영화의 모든 리뷰를 페이징으로 조회합니다.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "리뷰 목록 조회 성공"),
-            @ApiResponse(responseCode = "204", description = "리뷰 없음")
-    })
-    @GetMapping("/movie/{movieId}")
-    public ResponseEntity<Page<ReviewResponseDto>> getReviewsByMovie(
-            @PathVariable Long movieId,
-            @Parameter(description = "정렬 기준 (latest: 최신순, like: 좋아요순)", example = "latest")
-            @RequestParam(defaultValue = "latest") String sortBy,
-            @Parameter(description = "페이지 번호 (0부터 시작)", example = "0")
-            @RequestParam(defaultValue = "0") int page,
-            @Parameter(description = "페이지 크기", example = "10")
-            @RequestParam(defaultValue = "10") int size,
-            @Parameter(hidden = true) @RequestHeader(value = "Authorization", required = false) String sessionId,
-            Authentication authentication) {
-        Long id = sessionUtils.findCustomerIdByAuthentication(authentication);
-        Page<ReviewResponseDto> reviews = reviewService.getReviewsByMovie(movieId, sortBy, page, size, id);
-        
-        if (reviews.isEmpty()) {
-            return ResponseEntity.noContent().build();
-        }
-        return ResponseEntity.ok(reviews);
-    }
 
-    @Operation(summary = "영화 리뷰 요약 정보", description = "특정 영화의 평균 평점과 총 리뷰 개수를 조회합니다.")
-    @GetMapping("/movie/{movieId}/summary")
-    public ResponseEntity<ReviewSummaryDto> getReviewSummary(@PathVariable Long movieId) {
-        ReviewSummaryDto summary = reviewService.getReviewSummary(movieId);
-        return ResponseEntity.ok(summary);
-    }
 
     @Operation(summary = "리뷰 좋아요 토글", description = "리뷰에 좋아요를 추가하거나 제거합니다.")
     @ApiResponses(value = {
