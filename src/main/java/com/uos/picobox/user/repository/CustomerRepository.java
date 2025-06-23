@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -39,4 +40,10 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
     @Modifying
     @Query("UPDATE Customer c SET c.password = :password WHERE c.email = :email")
     void updatePasswordByEmail(@Param("email") String email, @Param("password") String password);
+    
+    // 관리자용 회원 관리 메서드들
+    List<Customer> findByIsActive(Boolean isActive);
+    List<Customer> findByLoginIdContainingIgnoreCase(String loginId);
+    List<Customer> findByNameContainingIgnoreCase(String name);
+    List<Customer> findByEmailContainingIgnoreCase(String email);
 }
