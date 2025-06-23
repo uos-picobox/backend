@@ -20,6 +20,7 @@ import com.uos.picobox.user.entity.Customer;
 import com.uos.picobox.user.repository.CustomerRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
@@ -36,6 +37,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -186,10 +188,11 @@ public class PaymentService {
             else {
                 PaymentStatus failedStatus = PaymentStatus.ABORTED;
                 payment.updateStatus(failedStatus);
-
+                log.error(conn.getResponseMessage());
                 throw new RuntimeException("Toss 결제 승인 요청 중 오류가 발생했습니다.");
             }
         } catch (Exception e) {
+            log.error(e.getMessage());
             throw new RuntimeException("Toss 결제 승인 요청 중 오류가 발생했습니다.");
         }
     }
