@@ -59,6 +59,3 @@ logging:
     root: INFO
     org.hibernate.SQL: WARN
     org.hibernate.type.descriptor.sql: WARN
-
-toss:
-  api-secret-key: ${TOSS_API_SECRET_KEY}
