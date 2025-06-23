@@ -6,6 +6,7 @@ import com.uos.picobox.user.entity.Customer;
 import com.uos.picobox.user.repository.CustomerRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,6 +17,7 @@ public class CustomerInfoService {
     private final CustomerRepository customerRepository;
     private final SignupService signupService;
     private final PasswordUtils passwordUtils;
+    private final PasswordEncoder passwordEncoder;
 
     public CustomerInfoResponseDto findCustomerInfoById(Long customerId) {
         Customer customer = customerRepository.findById(customerId).orElseThrow(() ->
@@ -78,7 +80,16 @@ public class CustomerInfoService {
             throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
         }
         String email = passwordUtils.findEmailByAuthCode(dto.getCode());
-        customerRepository.updatePasswordByEmail(email, dto.getPassword());
+        String encodedPassword = passwordEncoder.encode(dto.getPassword());
+        customerRepository.updatePasswordByEmail(email, encodedPassword);
         return new ResetPasswordResponseDto(dto.getPassword());
+    }
+
+    @Transactional
+    public void deleteCustomerById(Long customerId) {
+        if (!customerRepository.existsById(customerId)) {
+            throw new EntityNotFoundException("존재하지 않는 회원 ID입니다.");
+        }
+        customerRepository.deleteById(customerId);
     }
 }
