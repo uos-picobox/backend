@@ -11,4 +11,6 @@ import org.springframework.data.repository.query.Param;
 public interface PointHistoryRepository extends JpaRepository<PointHistory, Long> {
     @Query("SELECT ph FROM PointHistory ph WHERE ph.customer.id = :id")
     List<PointHistory> findAllByCustomerId(@Param("id") Long id);
+    @Query("SELECT ph FROM PointHistory ph WHERE ph.relatedReservationId = :relatedReservationId")
+    List<PointHistory> findAllByRelatedReservationId(@Param("relatedReservationId") Long id);
 }

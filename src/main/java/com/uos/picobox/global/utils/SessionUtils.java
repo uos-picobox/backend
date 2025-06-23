@@ -1,5 +1,6 @@
 package com.uos.picobox.global.utils;
 
+import com.uos.picobox.admin.service.AdminDeleteService;
 import com.uos.picobox.user.service.FindIdSevice;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.Cache;
@@ -19,6 +20,7 @@ import java.util.Objects;
 public class SessionUtils {
     private final CacheManager cacheManager;
     private final FindIdSevice findIdSevice;
+    private final AdminDeleteService adminDeleteService;
 
     public Map<String, String> createSession(String cacheName, String value) {
         String sessionId = java.util.UUID.randomUUID().toString();
@@ -113,6 +115,35 @@ public class SessionUtils {
             id = findIdSevice.findGuestIdByEmail(email);
              */
             throw new AccessDeniedException("비회원은 회원 관련 기능을 이용할 수 없습니다. 회원가입을 해주세요.");
+        }
+        else {
+            throw new IllegalArgumentException("잘못된 session 정보입니다.");
+        }
+        return id;
+    }
+
+    public Long findAdminIdByAuthentication(Authentication authentication) {
+        String value = (String) authentication.getPrincipal();
+        Map<String, String> sessionInfo = splitSessionValue(value);
+        String type = sessionInfo.get("type");
+        Long id;
+        if (type.equals("admin")) {
+            String loginId = sessionInfo.get("value");
+            id = adminDeleteService.findAdminIdByLoginId(loginId);
+        }
+        else if (type.equals("customer")) {
+            /*
+            String loginId = sessionInfo.get("value");
+            id = findIdSevice.findCustomerIdByLoginId(loginId);
+            */
+            throw new AccessDeniedException("회원은 관리자 기능을 이용할 수 없습니다.");
+        }
+        else if (type.equals("guest")) {
+            /*
+            String email = sessionInfo.get("value");
+            id = findIdSevice.findGuestIdByEmail(email);
+             */
+            throw new AccessDeniedException("비회원은 관리자 기능을 이용할 수 없습니다.");
         }
         else {
             throw new IllegalArgumentException("잘못된 session 정보입니다.");

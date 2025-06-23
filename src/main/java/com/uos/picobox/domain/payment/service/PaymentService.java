@@ -5,8 +5,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.uos.picobox.domain.payment.dto.*;
 import com.uos.picobox.domain.payment.entity.Payment;
 import com.uos.picobox.domain.payment.entity.PaymentDiscount;
+import com.uos.picobox.domain.payment.entity.Refund;
 import com.uos.picobox.domain.payment.repository.PaymentDiscountRepository;
 import com.uos.picobox.domain.payment.repository.PaymentRepository;
+import com.uos.picobox.domain.payment.repository.RefundRepository;
 import com.uos.picobox.domain.point.entity.PointHistory;
 import com.uos.picobox.domain.point.repository.PointHistoryRepository;
 import com.uos.picobox.domain.reservation.entity.Reservation;
@@ -47,6 +49,7 @@ public class PaymentService {
     @Value("${toss.api-secret-key}")
     private static String secretKey;
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final RefundRepository refundRepository;
 
     @Transactional
     public BeforePaymentResponseDto registerBeforePaymentInfo(BeforePaymentRequestDto paymentRequestDto) {
@@ -164,21 +167,6 @@ public class PaymentService {
                     pointHistoryRepository.save(pointHistory);
                 }
 
-                // 포인트 적립 (회원만, 결제 금액의 10%)
-                if ("customer".equals(userType)) {
-                    int earnedPoints = (int) (finalAmount * 0.1);
-                    if (earnedPoints > 0) {
-                        customer.addPoints(earnedPoints);
-                        PointHistory pointHistory = PointHistory.builder()
-                                .customer(customer)
-                                .changeType(PointChangeType.EARNED)
-                                .amount(earnedPoints)
-                                .relatedReservationId(payment.getReservation().getId())
-                                .build();
-                        pointHistoryRepository.save(pointHistory);
-                    }
-                }
-
                 Long paymentDiscountId = payment.getPaymentDiscountId();
                 if (paymentDiscountId != null) {
                     PaymentDiscount paymentDiscount = paymentDiscountRepository.findById(paymentDiscountId).orElseThrow(() ->
@@ -229,5 +217,46 @@ public class PaymentService {
                     .payment(payment)
                     .build();
         }
+    }
+
+    @Transactional
+    public void refundPayment(Long reservationId, String refundReason, Map<String, Object> userInfo) {
+        String userType = (String) userInfo.get("type");
+        Long userId = (Long) userInfo.get("id");
+
+        // paymentStatus 업데이트
+        Payment payment = paymentRepository.findByReservationId(reservationId).orElseThrow(() ->
+                new EntityNotFoundException("해당 예매에 대한 결제 정보를 찾을 수 없습니다."));
+        payment.updateStatus(PaymentStatus.REFUNDED);
+
+        // 회원일 경우, 포인트 원복
+        if ("customer".equals(userType)) {
+            List<PointHistory> pointHistoryList = pointHistoryRepository.findAllByRelatedReservationId(reservationId);
+            for (PointHistory pointHistory : pointHistoryList) {
+                Customer customer = pointHistory.getCustomer();
+                Integer amount = pointHistory.getAmount();
+                PointChangeType pointChangeType = pointHistory.getChangeType();
+                // 사용 시 포인트 다시 원복.
+                if (pointChangeType == PointChangeType.USED) {
+                    customer.addPoints(amount);
+                    PointHistory refundPointHistory = PointHistory.builder()
+                            .customer(customer)
+                            .changeType(PointChangeType.REFUNDED)
+                            .amount(amount)
+                            .relatedReservationId(reservationId)
+                            .build();
+                    pointHistoryRepository.save(pointHistory);
+                }
+            }
+        }
+        // 비회원일 경우, 포인트 적용 x.
+
+        // 환불 레코드 등록
+        Refund refund = Refund.builder()
+                .payment(payment)
+                .refundAmount(payment.getFinalAmount())
+                .refundReason(refundReason)
+                .build();
+        refundRepository.save(refund);
     }
 }

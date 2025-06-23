@@ -1,13 +1,13 @@
 package com.uos.picobox.domain.reservation.service;
 
 import com.uos.picobox.domain.payment.entity.Payment;
+import com.uos.picobox.domain.payment.service.PaymentService;
 import com.uos.picobox.domain.ticket.entity.Ticket;
 import com.uos.picobox.global.enumClass.ReservationStatus;
 import com.uos.picobox.domain.price.entity.RoomTicketTypePrice;
 import com.uos.picobox.domain.price.repository.RoomTicketTypePriceRepository;
 import com.uos.picobox.domain.reservation.dto.*;
 import com.uos.picobox.domain.reservation.entity.*;
-import com.uos.picobox.domain.payment.repository.PaymentRepository;
 import com.uos.picobox.domain.reservation.repository.ReservationRepository;
 import com.uos.picobox.domain.screening.entity.Screening;
 import com.uos.picobox.domain.screening.entity.ScreeningSeat;
@@ -19,11 +19,9 @@ import com.uos.picobox.user.entity.Customer;
 import com.uos.picobox.user.entity.Guest;
 import com.uos.picobox.user.repository.CustomerRepository;
 import com.uos.picobox.user.repository.GuestRepository;
-import com.uos.picobox.global.utils.SessionUtils;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +29,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -46,8 +45,7 @@ public class ReservationService {
     private final RoomTicketTypePriceRepository roomTicketTypePriceRepository;
     private final ScreeningRepository screeningRepository;
 
-    private final PaymentRepository paymentRepository;
-    private final SessionUtils sessionUtils;
+    private final PaymentService paymentService;
 
     private static final int SEAT_HOLD_MINUTES = 10;
 
@@ -381,6 +379,7 @@ public class ReservationService {
     /**
      * 사용자의 예매 내역을 조회합니다. (과거/현재 구분, 회원/게스트 지원)
      */
+    @Transactional
     public List<ReservationListResponseDto> getReservationList(Map<String, Object> userInfo) {
         String userType = (String) userInfo.get("type");
         Long userId = (Long) userInfo.get("id");
@@ -429,7 +428,7 @@ public class ReservationService {
                         seatNumbers,
                         reservation.getReservationDate(),
                         reservation.getReservationStatus().name(),
-                        null, //reservation.getPayment().getPaymentStatus().name(),
+                        Objects.requireNonNull(reservation.getPayment()).getPaymentStatus().getValue(),
                         finalAmount,
                         isScreeningCompleted
                     );
@@ -441,6 +440,7 @@ public class ReservationService {
     /**
      * 예매 상세 정보를 조회합니다.
      */
+    @Transactional
     public ReservationDetailResponseDto getReservationDetail(Long reservationId, Map<String, Object> userInfo) {
         String userType = (String) userInfo.get("type");
         Long userId = (Long) userInfo.get("id");
@@ -482,7 +482,7 @@ public class ReservationService {
             reservation.getId(),
             reservation.getReservationDate(),
             reservation.getReservationStatus().name(),
-            null, //payment.getPaymentStatus().name(),
+            Objects.requireNonNull(payment).getPaymentStatus().getValue(),
             screening.getMovie().getTitle(),
             screening.getMovie().getPosterUrl(),
             screening.getMovie().getMovieRating().getRatingName(),
@@ -559,16 +559,18 @@ public class ReservationService {
      * 예매를 취소합니다.
      * 상영 시작 10분 후까지만 취소 가능하며, 취소 시 좌석을 해제하고 포인트를 환불합니다.
      * 
-     * @param reservationId 취소할 예매 ID
+     * @param dto 취소할 예매 ID, 환불 사유 dto
      * @param userInfo 사용자 인증 정보
      * @throws IllegalArgumentException 예약자 정보가 일치하지 않는 경우
      * @throws IllegalStateException 취소 불가능한 상태인 경우
      * @throws EntityNotFoundException 예약 정보를 찾을 수 없는 경우
      */
     @Transactional
-    public void cancelReservation(Long reservationId, Map<String, Object> userInfo) {
+    public void cancelReservation(CancelReservationRequestDto dto, Map<String, Object> userInfo) {
         String userType = (String) userInfo.get("type");
         Long userId = (Long) userInfo.get("id");
+
+        Long reservationId = dto.getReservationId();
         
         log.info("예매 취소 요청: reservationId={}, userType={}, userId={}", reservationId, userType, userId);
         
@@ -612,8 +614,9 @@ public class ReservationService {
         // 예매 상태를 CANCELED로 변경
         reservation.updateReservationStatus(ReservationStatus.CANCELED);
         
-        // TODO: 결제 취소 메서드 호출
-        
+        // 결제 취소 메서드 호출
+        paymentService.refundPayment(reservationId, dto.getRefundReason(), userInfo);
+
         // 좌석 상태를 AVAILABLE로 변경
         for (Ticket ticket : reservation.getTickets()) {
             ScreeningSeat screeningSeat = screeningSeatRepository.findById(

@@ -94,4 +94,11 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
            "JOIN r.tickets t " +
            "WHERE r.reservationStatus = 'COMPLETED'")
     Long countTotalReservedAudience();
+
+    /**
+     * 회원이 예매하고 COMPLETED 상태의 예매 ID 전체 조회
+     */
+    @Query("SELECT r.id FROM Reservation r WHERE r.reservationStatus = 'COMPLETED' AND r.customer IS NOT NULL")
+    List<Long> findCompletedReservationIds();
+
 }
