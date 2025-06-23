@@ -4,11 +4,14 @@ import com.uos.picobox.domain.payment.entity.Payment;
 import com.uos.picobox.domain.payment.repository.PaymentRepository;
 import com.uos.picobox.domain.point.entity.PointHistory;
 import com.uos.picobox.domain.point.repository.PointHistoryRepository;
+import com.uos.picobox.domain.reservation.entity.Reservation;
 import com.uos.picobox.domain.reservation.repository.ReservationRepository;
 import com.uos.picobox.domain.screening.entity.ScreeningSeat;
 import com.uos.picobox.domain.screening.entity.SeatStatus;
 import com.uos.picobox.domain.screening.repository.ScreeningSeatRepository;
+import com.uos.picobox.domain.ticket.repository.TicketRepository;
 import com.uos.picobox.global.enumClass.PointChangeType;
+import com.uos.picobox.global.enumClass.TicketStatus;
 import com.uos.picobox.user.entity.Customer;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +31,7 @@ public class EarnPointScheduler {
     private final ReservationRepository reservationRepository;
     private final PointHistoryRepository pointHistoryRepository;
     private final PaymentRepository paymentRepository;
+    private final TicketRepository ticketRepository;
 
     /**
      * 매 30분마다 포인트 적립을 실행합니다.
@@ -35,9 +39,13 @@ public class EarnPointScheduler {
     @Scheduled(fixedRate = 1800000) // 30분마다 실행
     @Transactional
     public void earnPoints() {
-        // 회원이 예매하고 상태가 COMPLETED인 예매들.
-        List<Long> reservationIds = reservationRepository.findCompletedReservationIds();
-        for (Long reservationId : reservationIds) {
+        // 회원이 예매하고 티켓이 USED인 티켓들.
+        List<Reservation> reservations = ticketRepository.findReservationsByTicketStatus(TicketStatus.USED);
+        for (Reservation reservation : reservations) {
+            if (reservation.getCustomer() == null) {
+                continue;
+            }
+            Long reservationId = reservation.getId();
             List<PointHistory> pointHistoryList = pointHistoryRepository.findAllByRelatedReservationId(reservationId);
 
             // 이미 적립된 내역이 있는지 확인
