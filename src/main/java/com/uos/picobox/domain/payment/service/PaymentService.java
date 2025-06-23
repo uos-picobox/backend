@@ -32,6 +32,7 @@ import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
@@ -48,8 +49,8 @@ public class PaymentService {
     private final CustomerRepository customerRepository;
     private final PointHistoryRepository pointHistoryRepository;
     private final PaymentUtils paymentUtils;
-    @Value("${toss.api-secret-key}")
-    private static String secretKey;
+    @Value("${TOSS_API_SECRET_KEY}")
+    private String secretKey;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final RefundRepository refundRepository;
 
@@ -88,6 +89,7 @@ public class PaymentService {
 
     @Transactional
     public ConfirmPaymentResponseDto confirmPayment(ConfirmPaymentRequestDto paymentRequestDto, Map<String, Object> userInfo) {
+        log.info("Confirm payment request: {}", paymentRequestDto);
         String userType = (String) userInfo.get("type");
         Long userId = (Long) userInfo.get("id");
 
@@ -108,7 +110,9 @@ public class PaymentService {
 
         // 결제 confirm
         try {
+            log.info("secretKey: "+ secretKey);
             String encodedAuth = Base64.getEncoder().encodeToString((secretKey + ":").getBytes(StandardCharsets.UTF_8));
+            log.info("encodedAuth: "+ encodedAuth);
 
             URI uri = new URI("https://api.tosspayments.com/v1/payments/confirm");
             URL url = uri.toURL();
@@ -142,8 +146,10 @@ public class PaymentService {
 
                 // payment 테이블 update.
                 PaymentStatus paymentStatus = PaymentStatus.valueOf(responseJson.get("status").asText());
-                LocalDateTime approvedAt = LocalDateTime.parse(responseJson.get("approvedAt").asText());
-                LocalDateTime requestedAt = LocalDateTime.parse(responseJson.get("requestedAt").asText());
+                OffsetDateTime approvedOffset = OffsetDateTime.parse(responseJson.get("approvedAt").asText());
+                LocalDateTime approvedAt = approvedOffset.toLocalDateTime();
+                OffsetDateTime requestedOffset = OffsetDateTime.parse(responseJson.get("requestedAt").asText());
+                LocalDateTime requestedAt = requestedOffset.toLocalDateTime();
                 payment.updateStatus(paymentStatus);
                 payment.setApprovedAt(approvedAt);
                 payment.updateRequestedAt(requestedAt);
@@ -188,11 +194,11 @@ public class PaymentService {
             else {
                 PaymentStatus failedStatus = PaymentStatus.ABORTED;
                 payment.updateStatus(failedStatus);
-                log.error(conn.getResponseMessage());
+                log.error("Confirm Failed" + conn.getResponseMessage());
                 throw new RuntimeException("Toss 결제 승인 요청 중 오류가 발생했습니다.");
             }
         } catch (Exception e) {
-            log.error(e.getMessage());
+            log.error("Confirm Exception" + e.getMessage());
             throw new RuntimeException("Toss 결제 승인 요청 중 오류가 발생했습니다.");
         }
     }
