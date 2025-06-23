@@ -254,7 +254,7 @@ public class PaymentService {
                             .amount(amount)
                             .relatedReservationId(reservationId)
                             .build();
-                    pointHistoryRepository.save(pointHistory);
+                    pointHistoryRepository.save(refundPointHistory);
                 }
             }
         }
