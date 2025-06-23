@@ -81,6 +81,6 @@ public interface ScreeningRepository extends JpaRepository<Screening, Long> {
      * @param dateTime 기준 시간
      * @return 해당 시간 이전에 시작한 상영 목록
      */
-    @Query("SELECT s FROM Screening s WHERE s.screeningTime < :dateTime")
+    @Query("SELECT s FROM Screening s WHERE s.screeningTime > :dateTime")
     List<Screening> findScreeningsStartedBefore(@Param("dateTime") java.time.LocalDateTime dateTime);
 }
