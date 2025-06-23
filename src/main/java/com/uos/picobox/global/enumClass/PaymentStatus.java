@@ -1,13 +1,6 @@
 package com.uos.picobox.global.enumClass;
 
 public enum PaymentStatus implements BaseEnum {
-    // RESERVATION 테이블용
-    PENDING,
-    COMPLETED,
-    FAILED,
-    CANCELED,
-    
-    // PAYMENT 테이블용
     ABORTED,
     DONE,
     EXPIRED,
@@ -30,6 +23,6 @@ public enum PaymentStatus implements BaseEnum {
     }
     
     public boolean isFailed() {
-        return this == ABORTED || this == EXPIRED || this == CANCELED || this == FAILED;
+        return this == ABORTED || this == EXPIRED;
     }
 }

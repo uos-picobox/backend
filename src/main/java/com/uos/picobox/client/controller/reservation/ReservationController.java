@@ -145,4 +145,21 @@ public class ReservationController {
         TicketResponseDto ticket = reservationService.getTicket(reservationId, sessionInfo);
         return ResponseEntity.ok(ticket);
     }
+
+    @Operation(summary = "예매 취소", description = "완료된 예매를 취소합니다. 상영 시작 10분 후까지만 취소 가능하며, 사용한 포인트는 환불됩니다.", security = @SecurityRequirement(name = "sessionAuth"))
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "예매 취소 성공"),
+            @ApiResponse(responseCode = "400", description = "취소 불가능한 상태 (이미 취소됨, 취소 시간 초과 등)"),
+            @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자"),
+            @ApiResponse(responseCode = "404", description = "존재하지 않는 예매")
+    })
+    @PostMapping("/{reservationId}/cancel")
+    public ResponseEntity<Void> cancelReservation(
+            @Parameter(description = "취소할 예매 ID", required = true) @PathVariable Long reservationId,
+            @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId,
+            Authentication authentication) {
+        Map<String, Object> sessionInfo = sessionUtils.findSessionInfoByAuthentication(authentication);
+        reservationService.cancelReservation(reservationId, sessionInfo);
+        return ResponseEntity.ok().build();
+    }
 }

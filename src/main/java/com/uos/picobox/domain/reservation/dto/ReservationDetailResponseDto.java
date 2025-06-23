@@ -18,6 +18,9 @@ public class ReservationDetailResponseDto {
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
     private final LocalDateTime reservationDate;
 
+    @Schema(description = "예매 상태", example = "COMPLETED")
+    private final String reservationStatus;
+
     @Schema(description = "결제 상태", example = "COMPLETED")
     private final String paymentStatus;
 
@@ -62,13 +65,14 @@ public class ReservationDetailResponseDto {
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
     private final LocalDateTime paymentCompletedAt;
 
-    public ReservationDetailResponseDto(Long reservationId, LocalDateTime reservationDate, String paymentStatus,
+    public ReservationDetailResponseDto(Long reservationId, LocalDateTime reservationDate, String reservationStatus, String paymentStatus,
                                        String movieTitle, String posterUrl, String movieRating,
                                        LocalDateTime screeningTime, LocalDateTime screeningEndTime, String screeningRoomName,
                                        List<String> seatNumbers, Integer totalAmount, Integer usedPoints, Integer finalAmount,
                                        String paymentMethod, LocalDateTime paymentCompletedAt) {
         this.reservationId = reservationId;
         this.reservationDate = reservationDate;
+        this.reservationStatus = reservationStatus;
         this.paymentStatus = paymentStatus;
         this.movieTitle = movieTitle;
         this.posterUrl = posterUrl;
