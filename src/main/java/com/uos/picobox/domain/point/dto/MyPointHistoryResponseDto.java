@@ -18,6 +18,7 @@ public class MyPointHistoryResponseDto {
     private MyPointHistory[] histories;
 
     @Builder
+    @Getter
     public static class MyPointHistory {
         private PointChangeType changeType;
         private Integer amount;
