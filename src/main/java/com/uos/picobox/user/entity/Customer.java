@@ -80,4 +80,8 @@ public class Customer {
     public void addPoints(int pointsToAdd) {
         this.points += pointsToAdd;
     }
+
+    public void updateLastLoginAt() {
+        this.lastLoginAt = LocalDateTime.now();
+    }
 }
