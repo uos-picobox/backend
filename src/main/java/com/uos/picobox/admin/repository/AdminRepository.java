@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
+
 @Repository
 public interface AdminRepository extends JpaRepository<Admin, Long> {
 
@@ -25,4 +27,6 @@ public interface AdminRepository extends JpaRepository<Admin, Long> {
     @Query("SELECT a.id FROM Admin a WHERE a.loginId = :loginId")
     Long findIdByLoginId(@Param("loginId") String loginId);
 
+    @Query("SELECT a FROM Admin a WHERE a.loginId = :loginId")
+    Optional<Admin> findByLoginId(@Param("loginId") String loginId);
 }

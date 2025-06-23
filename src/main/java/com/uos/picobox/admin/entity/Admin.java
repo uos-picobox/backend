@@ -66,4 +66,8 @@ public class Admin {
         this.role = role;
         this.isActive = true;
     }
+
+    public void updateLastLoginAt() {
+        this.lastLoginAt = LocalDateTime.now();
+    }
 }
