@@ -24,6 +24,9 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
     @Query("SELECT c.id FROM Customer c WHERE c.loginId = :loginId")
     Long findIdByLoginId(@Param("loginId") String loginId);
 
+    @Query("SELECT c FROM Customer c WHERE c.loginId = :loginId")
+    Optional<Customer> findByLoginId(@Param("loginId") String loginId);
+
     @NonNull
     @Query("SELECT c FROM Customer c WHERE c.id = :id")
     Optional<Customer> findById(@Param("id") @NonNull Long id);
@@ -40,6 +43,10 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
     @Modifying
     @Query("UPDATE Customer c SET c.password = :password WHERE c.email = :email")
     void updatePasswordByEmail(@Param("email") String email, @Param("password") String password);
+
+    @Modifying
+    @Query("DELETE FROM Customer c WHERE c.id = :id")
+    void deleteById(@NonNull @Param("id") Long id);
     
     // 관리자용 회원 관리 메서드들
     List<Customer> findByIsActive(Boolean isActive);

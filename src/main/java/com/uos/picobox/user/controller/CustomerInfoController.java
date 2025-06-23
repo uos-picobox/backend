@@ -54,4 +54,19 @@ public class CustomerInfoController {
         CustomerInfoResponseDto response = customerInfoService.updateCustomerInfo(dto);
         return ResponseEntity.ok(response);
     }
+
+    @Operation(summary = "회원 탈퇴", description = "회원 탈퇴를 진행합니다. 이 API 호출 이전에 안내메세지를 안내해주세요.", security = @SecurityRequirement(name = "sessionAuth"))
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "회원 탈퇴가 성공적으로 수행되었습니다."),
+            @ApiResponse(responseCode = "400", description = "잘못된 요청입니다 (예: 유효성 검사 실패)."),
+            @ApiResponse(responseCode = "500", description = "서버 에러입니다. 관리자에게 문의하세요")
+    })
+    @DeleteMapping("/delete")
+    public ResponseEntity<?> deleteCustomer(
+            @Parameter(hidden = true) @RequestHeader("Authorization") String sessionId,
+            Authentication authentication) {
+        Long customerId = sessionUtils.findCustomerIdByAuthentication(authentication);
+        customerInfoService.deleteCustomerById(customerId);
+        return ResponseEntity.noContent().build();
+    }
 }
