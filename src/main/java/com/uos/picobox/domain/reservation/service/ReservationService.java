@@ -410,10 +410,9 @@ public class ReservationService {
                                 return screeningSeat != null ? screeningSeat.getSeat().getSeatNumber() : "정보없음";
                             })
                             .collect(Collectors.toList());
-                    
+
                     // 최종 금액 계산
-                    int usedPoints = reservation.getPayment() != null ? reservation.getPayment().getUsedPointAmount() : 0;
-                    int finalAmount = reservation.getTotalAmount() - usedPoints;
+                    int finalAmount = reservation.getPayment() != null ? reservation.getPayment().getFinalAmount() : 0;
                     
                     // 상영 완료 여부 확인 (상영 종료 시간 기준)
                     LocalDateTime screeningEndTime = screening.getScreeningTime().plusMinutes(screening.getMovie().getDuration());
@@ -474,7 +473,7 @@ public class ReservationService {
         // 결제 정보
         Payment payment = reservation.getPayment();
         int usedPoints = payment != null ? payment.getUsedPointAmount() : 0;
-        int finalAmount = reservation.getTotalAmount() - usedPoints;
+        int finalAmount = payment != null ? payment.getFinalAmount() : 0;
         String paymentMethod = payment != null ? payment.getPaymentMethod().getValue() : "정보없음";
         LocalDateTime paymentCompletedAt = payment != null ? payment.getApprovedAt() : null;
         
